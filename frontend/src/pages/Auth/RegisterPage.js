@@ -53,10 +53,10 @@ const RegisterPage = () => {
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 24,
+      padding: 16,
       background: 'linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, rgba(99,102,241,0.05) 100%)'
     }}>
-      <div className="glass" style={{ width: '100%', maxWidth: 420, padding: 32 }}>
+      <div className="glass" style={{ width: '100%', maxWidth: 420, padding: 24 }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <Link to="/" style={{
             display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', marginBottom: 24

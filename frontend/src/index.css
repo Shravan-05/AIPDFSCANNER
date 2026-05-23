@@ -335,12 +335,62 @@ a:hover {
 }
 
 @media (max-width: 768px) {
+  :root {
+    --page-padding: var(--spacing-md);
+    --grid-col-min: 160px;
+    --sidebar-width: 220px;
+  }
   .page-container {
     padding: var(--spacing-md);
   }
   .hide-mobile {
     display: none !important;
   }
+  h1 { font-size: 24px !important; }
+  h2 { font-size: 20px !important; }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --page-padding: 12px;
+    --grid-col-min: 140px;
+    --navbar-height: 56px;
+  }
+  .page-container {
+    padding: 12px !important;
+  }
+  .glass-card {
+    padding: 14px !important;
+  }
+  .glass {
+    padding: 14px !important;
+  }
+  .btn { padding: 8px 14px !important; font-size: 0.8rem !important; }
+  .btn-sm { padding: 5px 10px !important; font-size: 0.75rem !important; }
+  .btn-lg { padding: 10px 20px !important; font-size: 0.875rem !important; }
+  .input { padding: 8px 12px !important; font-size: 0.8rem !important; }
+  h1 { font-size: 20px !important; }
+  h2 { font-size: 18px !important; }
+  h3 { font-size: 15px !important; }
+  body { font-size: 14px; }
+  [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 360px) {
+  :root {
+    --page-padding: 8px;
+    --grid-col-min: 120px;
+  }
+  .page-container {
+    padding: 8px !important;
+  }
+  .glass-card {
+    padding: 10px !important;
+  }
+  h1 { font-size: 18px !important; }
+  h2 { font-size: 16px !important; }
 }
 
 @media (min-width: 769px) {

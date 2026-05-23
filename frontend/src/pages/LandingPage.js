@@ -28,7 +28,7 @@ const LandingPage = () => {
       <nav className="glass-nav" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 24px', height: 'var(--navbar-height)'
+        padding: '0 16px', height: 'var(--navbar-height)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{
@@ -56,7 +56,7 @@ const LandingPage = () => {
       <section style={{
         minHeight: '100vh',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        textAlign: 'center', padding: '80px 24px',
+        textAlign: 'center', padding: '80px 16px',
         background: 'linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, rgba(99,102,241,0.05) 100%)'
       }}>
         <div style={{ maxWidth: 800 }}>
@@ -109,7 +109,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <section style={{ padding: '80px 24px' }}>
+      <section style={{ padding: '80px 16px' }}>
         <div className="page-container">
           <h2 style={{ fontSize: 32, fontWeight: 700, textAlign: 'center', marginBottom: 48 }}>
             Powerful Features
@@ -136,7 +136,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <section style={{ padding: '80px 24px', background: 'var(--bg-secondary)' }}>
+      <section style={{ padding: '80px 16px', background: 'var(--bg-secondary)' }}>
         <div className="page-container">
           <h2 style={{ fontSize: 32, fontWeight: 700, textAlign: 'center', marginBottom: 48 }}>
             How It Works
@@ -165,7 +165,7 @@ const LandingPage = () => {
       </section>
 
       <footer style={{
-        textAlign: 'center', padding: '32px 24px',
+        textAlign: 'center', padding: '24px 16px',
         color: 'var(--text-tertiary)', fontSize: 13,
         borderTop: '1px solid var(--border-color)'
       }}>

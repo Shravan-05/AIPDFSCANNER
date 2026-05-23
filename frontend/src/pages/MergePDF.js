@@ -178,8 +178,8 @@ const MergePDF = () => {
   };
 
   return (
-    <div className="container" style={{ maxWidth: 800, padding: '40px 20px' }}>
-      <div style={{ textAlign: 'center', marginBottom: 40 }}>
+    <div className="container" style={{ maxWidth: 800, padding: '32px 16px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12 }}>Merge PDF Files</h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: 16 }}>Combine PDFs in the order you want with the easiest PDF merger available.</p>
       </div>
@@ -189,7 +189,7 @@ const MergePDF = () => {
         style={{ 
           border: '2px dashed var(--primary-color)', 
           background: isDraggingOver ? 'rgba(99, 102, 241, 0.05)' : 'var(--bg-secondary)',
-          padding: 60, textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
+          padding: '40px 24px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
           marginBottom: 32
         }}
         onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true); }}
@@ -211,7 +211,7 @@ const MergePDF = () => {
       </div>
 
       {files.length > 0 && (
-        <div style={{ background: 'var(--bg-secondary)', padding: 24, borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)' }}>
+        <div style={{ background: 'var(--bg-secondary)', padding: 16, borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h4 style={{ margin: 0, fontWeight: 700 }}>{files.length} file{files.length !== 1 && 's'} selected</h4>
             <button className="btn btn-ghost btn-sm" onClick={() => setFiles([])} style={{ color: 'var(--error-color)' }}>Clear All</button>

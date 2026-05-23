@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -28,6 +28,7 @@ const ProtectedRoute = ({ children }) => {
 const AppLayout = ({ children }) => {
   const { user, token, loading } = useAuth();
   const location = useLocation();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const authPaths = ['/', '/login', '/register', '/forgot-password'];
   const isAuthPage = authPaths.includes(location.pathname);
   const shouldShowShell = !isAuthPage && (user || (token && loading));
@@ -36,9 +37,9 @@ const AppLayout = ({ children }) => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {shouldShowShell && <Sidebar />}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {shouldShowShell && <Navbar />}
+      {shouldShowShell && <Sidebar mobileOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {shouldShowShell && <Navbar onToggleSidebar={() => setMobileSidebarOpen(o => !o)} />}
         <main style={{ flex: 1, padding: shouldShowShell ? '24px' : 0, minWidth: 0 }}>
           {children}
         </main>

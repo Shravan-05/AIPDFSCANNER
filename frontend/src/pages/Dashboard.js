@@ -102,16 +102,16 @@ const Dashboard = () => {
   return (
     <div className="page-container" style={{ maxWidth: 1280 }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32 }}>
-        <div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <Sparkles size={20} color="var(--accent-primary)" />
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-primary)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
               AuraScan AI
             </span>
           </div>
-          <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 6 }}>
-            {greeting()}, {user?.name?.split(' ')[0] || 'there'} 👋
+          <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 6, wordBreak: 'break-word' }}>
+            {greeting()}, {user?.name?.split(' ')[0] || 'there'}
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 15 }}>
             Here's your document overview for today.
@@ -120,10 +120,10 @@ const Dashboard = () => {
         <button
           className="btn btn-secondary btn-sm"
           onClick={loadData}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
         >
           <RefreshCw size={14} />
-          Refresh
+          <span className="hide-mobile">Refresh</span>
         </button>
       </div>
 

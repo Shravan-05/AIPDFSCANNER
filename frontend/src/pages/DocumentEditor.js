@@ -322,10 +322,10 @@ const DocumentEditor = () => {
     <div style={{ maxWidth: 1340, margin: '0 auto', padding: '16px 20px' }}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', marginBottom: 20, gap: 12,
-      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', marginBottom: 20, gap: 12, flexWrap: 'wrap',
+        }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
           <button
             className="btn btn-ghost btn-sm"
@@ -361,7 +361,7 @@ const DocumentEditor = () => {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
           {/* Toggle original vs processed */}
           <button
             className="btn btn-ghost btn-sm"
@@ -448,7 +448,7 @@ const DocumentEditor = () => {
       </div>
 
       {/* ── Main content: preview + enhancement panel ─────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 272px', gap: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 18 }}>
 
         {/* Image preview */}
         <div className="glass-card" style={{ padding: 0, overflow: 'hidden', position: 'relative', minHeight: 480 }}>

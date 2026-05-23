@@ -30,10 +30,10 @@ const ForgotPasswordPage = () => {
   if (sent) {
     return (
       <div style={{
-        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
         background: 'linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, rgba(99,102,241,0.05) 100%)'
       }}>
-        <div className="glass" style={{ width: '100%', maxWidth: 420, padding: 32, textAlign: 'center' }}>
+        <div className="glass" style={{ width: '100%', maxWidth: 420, padding: 24, textAlign: 'center' }}>
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
             <CheckCircle size={32} style={{ color: 'var(--success)' }} />
           </div>
@@ -51,10 +51,10 @@ const ForgotPasswordPage = () => {
 
   return (
     <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
       background: 'linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, rgba(99,102,241,0.05) 100%)'
     }}>
-      <div className="glass" style={{ width: '100%', maxWidth: 420, padding: 32 }}>
+      <div className="glass" style={{ width: '100%', maxWidth: 420, padding: 24 }}>
         <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 24, fontSize: 14, color: 'var(--text-secondary)' }}>
           <ArrowLeft size={16} /> Back to sign in
         </Link>

@@ -696,7 +696,7 @@ const AiEditor = () => {
       }}>
         {/* Document Tray & Header */}
         <div style={{
-          padding: '12px 20px', display: 'flex', flexDirection: 'column',
+          padding: '10px 14px', display: 'flex', flexDirection: 'column',
           borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', gap: 10
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -948,7 +948,7 @@ const AiEditor = () => {
       {/* ── RIGHT: Collapsible AI Chat Sidebar ────────────────────────────────── */}
       {!sidebarCollapsed && (
         <div style={{
-          flex: '0 0 390px', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          flex: '0 0 min(390px, 100%)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
           borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)',
           background: 'rgba(20, 20, 35, 0.85)', backdropFilter: 'blur(20px)',
           boxShadow: 'var(--shadow-lg)', animation: 'slideRight 0.3s ease'
@@ -956,7 +956,7 @@ const AiEditor = () => {
 
           {/* Sidebar Header */}
           <div style={{
-            padding: '14px 18px', borderBottom: '1px solid var(--border-color)',
+            padding: '10px 14px', borderBottom: '1px solid var(--border-color)',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

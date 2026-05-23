@@ -100,7 +100,7 @@ const ScannerWorkspace = () => {
           )}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
           <div className="glass-card">
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
               <Settings size={18} style={{ marginRight: 8, verticalAlign: 'middle' }} />

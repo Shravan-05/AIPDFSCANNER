@@ -281,7 +281,7 @@ const SettingsPage = () => {
                 onChange={() => setPreferences(prev => ({ ...prev, autoDuplicate: !prev.autoDuplicate }))}
               />
               <div style={{ height: 1, background: 'var(--border-color)', margin: '12px 0' }} />
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                 <div>
                   <label style={{ fontSize: 14, fontWeight: 500, display: 'block', marginBottom: 8 }}>
                     Export Quality
@@ -328,7 +328,7 @@ const SettingsPage = () => {
                 <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12 }}>
                   Select the primary language of your scanned documents for best accuracy.
                 </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
                   {OCR_LANGUAGES.map(lang => (
                     <button
                       key={lang.value}
@@ -428,7 +428,7 @@ const SettingsPage = () => {
               {preferences.cloudStorage?.provider === 's3' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, borderRadius: 'var(--radius-md)', background: 'rgba(255,153,0,0.06)', border: '1px solid rgba(255,153,0,0.2)' }}>
                   <h4 style={{ fontSize: 13, fontWeight: 600, color: '#ff9900', marginBottom: 4 }}>☁️ AWS S3 Configuration</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
                     <div>
                       <label style={{ fontSize: 13, fontWeight: 500, display: 'block', marginBottom: 6 }}>Bucket Name</label>
                       <input className="input" placeholder="my-aurascan-bucket"

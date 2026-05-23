@@ -170,7 +170,7 @@ const FilesPage = () => {
   return (
     <div className="page-container" style={{ maxWidth: 1300, paddingBottom: selected.size > 0 ? 100 : 24 }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 4, background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Files
@@ -205,9 +205,9 @@ const FilesPage = () => {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 28 }}>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search files..." style={{ flex: 1 }} />
-        <select className="input" value={sort} onChange={(e) => setSort(e.target.value)} style={{ width: 175 }}>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
+        <SearchBar value={search} onChange={setSearch} placeholder="Search files..." style={{ flex: '1 1 100%' }} />
+        <select className="input" value={sort} onChange={(e) => setSort(e.target.value)} style={{ width: '100%' }}>
           <option value="-createdAt">Newest First</option>
           <option value="createdAt">Oldest First</option>
           <option value="title">Name A-Z</option>
@@ -237,8 +237,8 @@ const FilesPage = () => {
       {selected.size > 0 && (
         <div style={{
           position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
-          zIndex: 200, display: 'flex', alignItems: 'center', gap: 12,
-          padding: '14px 24px',
+          zIndex: 200, display: 'flex', alignItems: 'center', gap: 8,
+          padding: '10px 16px',
           background: 'var(--bg-secondary)',
           backdropFilter: 'blur(24px)',
           border: '1px solid var(--border-color)',
