@@ -1,5 +1,6 @@
 const errorHandler = (err, req, res, next) => {
-  console.error(err.stack);
+  const NODE_ENV = process.env.NODE_ENV || 'development';
+  console.error(NODE_ENV === 'production' ? err.message : err.stack);
 
   if (err.name === 'ValidationError') {
     const messages = Object.values(err.errors).map(val => val.message);
@@ -22,7 +23,8 @@ const errorHandler = (err, req, res, next) => {
   }
 
   res.status(err.statusCode || 500).json({
-    msg: err.message || 'Server error'
+    msg: err.message || 'Server error',
+    ...(NODE_ENV === 'development' && { stack: err.stack })
   });
 };
 
