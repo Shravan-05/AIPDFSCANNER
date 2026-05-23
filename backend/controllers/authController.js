@@ -3,6 +3,16 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { validationResult } = require('express-validator');
 
+const MINIMAL_USER_FIELDS = 'id name email avatar preferences.theme preferences.ocrEnabled storageUsed';
+
+const signToken = (userId) => {
+  return jwt.sign(
+    { user: { id: userId } },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+  );
+};
+
 exports.register = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -10,25 +20,17 @@ exports.register = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
     const { name, email, password } = req.body;
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email }).select('_id');
     if (user) {
       return res.status(400).json({ msg: 'User already exists' });
     }
     user = new User({ name, email, password });
     await user.save();
-    const payload = { user: { id: user.id } };
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN },
-      (err, token) => {
-        if (err) throw err;
-        res.status(201).json({
-          token,
-          user: { id: user.id, name: user.name, email: user.email, preferences: user.preferences }
-        });
-      }
-    );
+    const token = signToken(user.id);
+    res.status(201).json({
+      token,
+      user: { id: user.id, name: user.name, email: user.email, preferences: user.preferences }
+    });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
@@ -42,7 +44,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
     const { email, password } = req.body;
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email }).select('+password');
     if (!user) {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
@@ -51,26 +53,18 @@ exports.login = async (req, res) => {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
     user.lastLogin = Date.now();
-    await user.save();
-    const payload = { user: { id: user.id } };
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN },
-      (err, token) => {
-        if (err) throw err;
-        res.json({
-          token,
-          user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            preferences: user.preferences,
-            storageUsed: user.storageUsed
-          }
-        });
+    await user.save({ validateBeforeSave: false });
+    const token = signToken(user.id);
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        preferences: user.preferences,
+        storageUsed: user.storageUsed
       }
-    );
+    });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
@@ -80,6 +74,24 @@ exports.login = async (req, res) => {
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    res.set('Cache-Control', 'private, max-age=60');
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+};
+
+exports.getMeMinimal = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select(MINIMAL_USER_FIELDS);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    res.set('Cache-Control', 'private, max-age=120');
     res.json(user);
   } catch (err) {
     console.error(err.message);
@@ -91,6 +103,7 @@ exports.updateProfile = async (req, res) => {
   try {
     const { name, avatar } = req.body;
     const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
     if (name) user.name = name;
     if (avatar !== undefined) user.avatar = avatar;
     await user.save();
@@ -139,16 +152,8 @@ exports.resetPassword = async (req, res) => {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save();
-    const payload = { user: { id: user.id } };
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token, msg: 'Password reset successful' });
-      }
-    );
+    const token = signToken(user.id);
+    res.json({ token, msg: 'Password reset successful' });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');

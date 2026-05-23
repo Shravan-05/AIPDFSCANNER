@@ -24,19 +24,45 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 fs.promises.mkdir(UPLOAD_DIR, { recursive: true }).catch(() => {});
 
 app.set('trust proxy', 1);
+app.set('etag', 'strong');
 
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  contentSecurityPolicy: false
+}));
 app.use(cors({ origin: CORS_ORIGIN === '*' ? '*' : CORS_ORIGIN.split(',').map(s => s.trim()) }));
-app.use(compression({ level: 6, threshold: 1024 }));
+app.use(compression({ level: 6, threshold: 256 }));
 app.use(morgan(NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: NODE_ENV === 'production' ? '7d' : 0,
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
+}));
+
+const cacheMiddleware = (duration) => {
+  return (req, res, next) => {
+    if (NODE_ENV === 'production' && req.method === 'GET') {
+      res.set('Cache-Control', `public, max-age=${duration}`);
+    }
+    next();
+  };
+};
 
 const frontendBuild = path.join(__dirname, '..', 'frontend', 'build');
 fs.promises.access(frontendBuild).then(() => {
-  app.use(express.static(frontendBuild));
+  app.use(express.static(frontendBuild, {
+    maxAge: '30d',
+    etag: true,
+    lastModified: true
+  }));
 }).catch(() => {});
 
 app.get('/', (req, res) => {
@@ -48,12 +74,14 @@ app.use('/api/scans', scanRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/pdf', require('./routes/pdfTools'));
+app.use('/api', require('./routes/share'));
 
 try {
-  fs.accessSync(frontendBuild);
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendBuild, 'index.html'));
-  });
+  if (fs.existsSync(frontendBuild)) {
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(frontendBuild, 'index.html'));
+    });
+  }
 } catch (e) {}
 
 app.use(errorHandler);

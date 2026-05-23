@@ -29,6 +29,13 @@ const SortableItem = ({ id, fileObj, onRemove }) => {
     isDragging
   } = useSortable({ id });
 
+  const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 768);
+  React.useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -37,30 +44,38 @@ const SortableItem = ({ id, fileObj, onRemove }) => {
   };
 
   return (
-    <div ref={setNodeRef} className={`glass-card ${isDragging ? 'dragging' : ''}`} style={{ ...style, display: 'flex', alignItems: 'center', padding: '12px 16px', marginBottom: 12, gap: 16 }}>
-      <div {...attributes} {...listeners} style={{ cursor: 'grab', color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}>
-        <GripVertical size={20} />
+    <div ref={setNodeRef} className={`glass-card ${isDragging ? 'dragging' : ''}`}
+      style={{ ...style, display: 'flex', alignItems: 'center', padding: isMobile ? '14px 12px' : '12px 16px', marginBottom: 12, gap: 12 }}>
+      <div {...attributes} {...listeners}
+        style={{
+          cursor: 'grab', color: 'var(--text-tertiary)',
+          display: 'flex', alignItems: 'center',
+          padding: isMobile ? '8px' : '0', touchAction: 'none',
+          minHeight: 40
+        }}>
+        <GripVertical size={isMobile ? 24 : 20} />
       </div>
       
       {fileObj.thumbnail ? (
-        <img src={fileObj.thumbnail} alt="thumb" style={{ width: 40, height: 50, objectFit: 'cover', borderRadius: 4, background: '#fff', border: '1px solid var(--border-color)' }} />
+        <img src={fileObj.thumbnail} alt="thumb" style={{ width: 40, height: 50, objectFit: 'cover', borderRadius: 4, background: '#fff', border: '1px solid var(--border-color)', flexShrink: 0 }} />
       ) : (
-        <div style={{ width: 40, height: 50, background: 'var(--bg-tertiary)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-color)' }}>
+        <div style={{ width: 40, height: 50, background: 'var(--bg-tertiary)', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-color)', flexShrink: 0 }}>
           <File size={20} color="var(--primary-color)" />
         </div>
       )}
 
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <p style={{ margin: 0, fontWeight: 600, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <div style={{ flex: 1, overflow: 'hidden', minWidth: 0 }}>
+        <p style={{ margin: 0, fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {fileObj.file.name}
         </p>
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+        <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)' }}>
           {(fileObj.file.size / 1024 / 1024).toFixed(2)} MB • {fileObj.pages || '?'} pages
         </p>
       </div>
 
-      <button className="btn btn-ghost btn-sm" onClick={() => onRemove(id)} style={{ color: 'var(--error-color)', padding: 8 }}>
-        <Trash2 size={18} />
+      <button className="btn btn-ghost btn-sm" onClick={() => onRemove(id)}
+        style={{ color: 'var(--error)', padding: isMobile ? '10px' : '8px', minHeight: 40, minWidth: 40 }}>
+        <Trash2 size={isMobile ? 20 : 18} />
       </button>
     </div>
   );

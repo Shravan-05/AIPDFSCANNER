@@ -1,27 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Navbar from './components/Layout/Navbar';
 import Sidebar from './components/Layout/Sidebar';
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/Auth/LoginPage';
-import RegisterPage from './pages/Auth/RegisterPage';
-import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage';
-import Dashboard from './pages/Dashboard';
-import ScannerWorkspace from './pages/ScannerWorkspace';
-import DocumentEditor from './pages/DocumentEditor';
-import FilesPage from './pages/FilesPage';
-import SettingsPage from './pages/SettingsPage';
-import MergePDF from './pages/MergePDF';
-import AiEditor from './pages/AiEditor';
 import './index.css';
+
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const LoginPage = lazy(() => import('./pages/Auth/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/Auth/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/Auth/ForgotPasswordPage'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ScannerWorkspace = lazy(() => import('./pages/ScannerWorkspace'));
+const DocumentEditor = lazy(() => import('./pages/DocumentEditor'));
+const FilesPage = lazy(() => import('./pages/FilesPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const MergePDF = lazy(() => import('./pages/MergePDF'));
+const AiEditor = lazy(() => import('./pages/AiEditor'));
+const SharedPdfPage = lazy(() => import('./pages/SharedPdfPage'));
+
+const PageLoader = () => (
+  <div style={{
+    display: 'flex', justifyContent: 'center', alignItems: 'center',
+    height: '100vh', minHeight: 300,
+    background: 'var(--bg-primary)'
+  }}>
+    <div style={{
+      width: 40, height: 40,
+      borderRadius: '50%',
+      border: '3px solid var(--border-color)',
+      borderTopColor: 'var(--accent-primary)',
+      animation: 'spin 0.8s linear infinite'
+    }} />
+  </div>
+);
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}><div className="skeleton" style={{ width: 48, height: 48, borderRadius: '50%' }} /></div>;
-  if (!user) return <Navigate to="/login" />;
+  if (loading) return <PageLoader />;
+  if (!user) return <Navigate to="/login" replace />;
   return children;
 };
 
@@ -30,7 +48,8 @@ const AppLayout = ({ children }) => {
   const location = useLocation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const authPaths = ['/', '/login', '/register', '/forgot-password'];
-  const isAuthPage = authPaths.includes(location.pathname);
+  const isSharePage = location.pathname.startsWith('/share/');
+  const isAuthPage = authPaths.includes(location.pathname) || isSharePage;
   const shouldShowShell = !isAuthPage && (user || (token && loading));
 
   if (isAuthPage) return children;
@@ -41,7 +60,9 @@ const AppLayout = ({ children }) => {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {shouldShowShell && <Navbar onToggleSidebar={() => setMobileSidebarOpen(o => !o)} />}
         <main style={{ flex: 1, padding: shouldShowShell ? '24px' : 0, minWidth: 0 }}>
-          {children}
+          <Suspense fallback={<PageLoader />}>
+            {children}
+          </Suspense>
         </main>
       </div>
     </div>
@@ -79,6 +100,7 @@ function App() {
               <Route path="/tools/merge" element={<ProtectedRoute><MergePDF /></ProtectedRoute>} />
               <Route path="/tools/ai" element={<ProtectedRoute><AiEditor /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+              <Route path="/share/:token" element={<SharedPdfPage />} />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </AppLayout>

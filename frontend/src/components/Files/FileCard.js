@@ -8,7 +8,8 @@ import { getFileUrl } from '../../services/api';
 
 const FileCard = ({
   file, onRename, onDelete, onDownload, onShare,
-  onToggleFavorite, onSplit, isSelecting, isSelected, onToggleSelect
+  onToggleFavorite, onSplit, isSelecting, isSelected, onToggleSelect,
+  onShareFile
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -165,8 +166,8 @@ const FileCard = ({
             <button
               className="btn btn-ghost btn-sm"
               style={{ padding: '5px 8px', fontSize: 12 }}
-              onClick={() => onShare?.(file.id)}
-              title="Share"
+              onClick={() => onShareFile?.(file.id)}
+              title="Share PDF"
             >
               <Share2 size={13} />
             </button>

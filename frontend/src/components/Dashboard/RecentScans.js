@@ -60,18 +60,10 @@ const RecentScans = ({ scans = [], loading }) => {
         return (
           <div
             key={scan._id}
-            className="glass-card"
+            className="glass-card scan-card-hover"
             style={{
               cursor: 'pointer', padding: 0, overflow: 'hidden',
               transition: 'transform 200ms, box-shadow 200ms'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-3px) scale(1.01)';
-              e.currentTarget.style.boxShadow = '0 12px 32px rgba(99,102,241,0.2), var(--shadow-md)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0) scale(1)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
             }}
             onClick={() => navigate(`/editor/${scan._id}`)}
           >

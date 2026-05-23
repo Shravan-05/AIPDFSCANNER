@@ -67,6 +67,8 @@ const LoginPage = () => {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              inputMode="email"
               required
             />
           </div>
@@ -82,6 +84,7 @@ const LoginPage = () => {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
                 style={{ paddingRight: 40 }}
                 required
               />

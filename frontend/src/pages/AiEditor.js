@@ -159,6 +159,14 @@ const AiEditor = () => {
   // Sidebar state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   // Undo / Redo stacks
   const [historyStack, setHistoryStack]   = useState([]);
   const [historyIndex, setHistoryIndex]   = useState(-1);
@@ -669,12 +677,20 @@ const AiEditor = () => {
   };
 
   // ── Render ────────────────────────────────────────────────────────────────────
+
   return (
     <div
       onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
       onDragLeave={() => setIsDragActive(false)}
       onDrop={handleDrop}
-      style={{ display: 'flex', height: 'calc(100vh - 96px)', gap: 20, overflow: 'hidden', position: 'relative' }}
+      style={{
+        display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+        height: isMobile ? 'auto' : 'calc(100vh - 96px)',
+        minHeight: isMobile ? 'calc(100vh - 120px)' : 'auto',
+        gap: isMobile ? 12 : 20,
+        overflow: isMobile ? 'auto' : 'hidden',
+        position: 'relative', padding: isMobile ? '0 0 80px' : 0
+      }}
     >
       {isDragActive && (
         <div style={{
@@ -945,13 +961,15 @@ const AiEditor = () => {
         </div>
       </div>
 
-      {/* ── RIGHT: Collapsible AI Chat Sidebar ────────────────────────────────── */}
+      {/* ── RIGHT/ Bottom: Collapsible AI Chat Sidebar ──────────────────────── */}
       {!sidebarCollapsed && (
         <div style={{
-          flex: '0 0 min(390px, 100%)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          flex: isMobile ? '0 0 auto' : '0 0 min(390px, 100%)',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
           borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)',
           background: 'rgba(20, 20, 35, 0.85)', backdropFilter: 'blur(20px)',
-          boxShadow: 'var(--shadow-lg)', animation: 'slideRight 0.3s ease'
+          boxShadow: 'var(--shadow-lg)', animation: 'slideRight 0.3s ease',
+          ...(isMobile ? { maxHeight: '50vh', minHeight: 300 } : {})
         }}>
 
           {/* Sidebar Header */}
@@ -1184,8 +1202,8 @@ const AiEditor = () => {
         </div>
       )}
 
-      {/* Sidebar expander button (when collapsed) */}
-      {sidebarCollapsed && (
+      {/* Sidebar expander button (when collapsed on desktop) */}
+      {sidebarCollapsed && !isMobile && (
         <button
           onClick={() => setSidebarCollapsed(false)}
           title="Expand AI Sidebar"
@@ -1198,6 +1216,25 @@ const AiEditor = () => {
           }}
         >
           <ChevronLeft size={18} />
+        </button>
+      )}
+
+      {/* Mobile expand button at bottom */}
+      {sidebarCollapsed && isMobile && (
+        <button
+          onClick={() => setSidebarCollapsed(false)}
+          title="Open AI Chat"
+          style={{
+            position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 100, padding: '10px 24px', borderRadius: 100,
+            background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+            color: 'white', border: 'none', cursor: 'pointer',
+            boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+            fontSize: 14, fontWeight: 600, display: 'flex',
+            alignItems: 'center', gap: 8
+          }}
+        >
+          <Bot size={18} /> AI Chat
         </button>
       )}
 

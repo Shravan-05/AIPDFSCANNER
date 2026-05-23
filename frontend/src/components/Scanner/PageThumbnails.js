@@ -1,21 +1,26 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { getFileUrl } from '../../services/api';
 import { RotateCw, Trash2, Copy, GripVertical } from 'lucide-react';
 
-/**
- * PageThumbnails — drag-and-drop reorderable page strip.
- * Reorder is fully automatic via drag. No manual buttons needed.
- */
 const PageThumbnails = ({ pages = [], selectedPage, onSelect, onRotate, onDelete, onDuplicate, onReorder }) => {
-  const [dragging, setDragging] = useState(null);   // index being dragged
-  const [dragOver, setDragOver] = useState(null);   // index hovered over
+  const [dragging, setDragging] = useState(null);
+  const [dragOver, setDragOver] = useState(null);
   const dragNode = useRef(null);
+  const [touchStart, setTouchStart] = useState(null);
+  const containerRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const handleDragStart = (e, index) => {
     setDragging(index);
     dragNode.current = e.currentTarget;
     e.dataTransfer.effectAllowed = 'move';
-    // small delay so the ghost image renders before transparency kicks in
     setTimeout(() => {
       if (dragNode.current) dragNode.current.style.opacity = '0.4';
     }, 0);
@@ -47,16 +52,59 @@ const PageThumbnails = ({ pages = [], selectedPage, onSelect, onRotate, onDelete
     dragNode.current = null;
   };
 
+  // Touch-based reordering for mobile
+  const handleTouchStart = (e, index) => {
+    setTouchStart({ index, x: e.touches[0].clientX, y: e.touches[0].clientY });
+    setDragging(index);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!touchStart) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const container = containerRef.current;
+    if (!container) return;
+    const thumbnails = container.querySelectorAll('[data-thumb-index]');
+    let targetIndex = touchStart.index;
+    thumbnails.forEach((thumb, i) => {
+      const rect = thumb.getBoundingClientRect();
+      if (touch.clientX >= rect.left && touch.clientX <= rect.right) {
+        targetIndex = i;
+      }
+    });
+    if (targetIndex !== dragOver) setDragOver(targetIndex);
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!touchStart || dragging === null) {
+      setDragging(null);
+      setTouchStart(null);
+      return;
+    }
+    if (dragOver !== null && dragOver !== touchStart.index) {
+      const reordered = [...pages];
+      const [moved] = reordered.splice(touchStart.index, 1);
+      reordered.splice(dragOver, 0, moved);
+      onReorder?.(reordered.map(p => p._id));
+    }
+    setDragging(null);
+    setDragOver(null);
+    setTouchStart(null);
+  };
+
   if (!pages.length) return null;
 
   return (
-    <div style={{
-      display: 'flex',
-      gap: 10,
-      overflowX: 'auto',
-      padding: '10px 4px',
-      scrollbarWidth: 'thin',
-    }}>
+    <div
+      ref={containerRef}
+      style={{
+        display: 'flex', gap: 10, overflowX: 'auto',
+        padding: '10px 4px', scrollbarWidth: 'thin',
+        WebkitOverflowScrolling: 'touch'
+      }}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {pages.map((page, index) => {
         const isSelected = selectedPage?._id === page._id;
         const isDraggingThis = dragging === index;
@@ -65,16 +113,19 @@ const PageThumbnails = ({ pages = [], selectedPage, onSelect, onRotate, onDelete
         return (
           <div
             key={page._id || index}
+            data-thumb-index={index}
             draggable
             onDragStart={(e) => handleDragStart(e, index)}
             onDragEnter={(e) => handleDragEnter(e, index)}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, index)}
             onDragEnd={handleDragEnd}
+            onTouchStart={(e) => handleTouchStart(e, index)}
             onClick={() => onSelect?.(page)}
             style={{
               flexShrink: 0,
-              width: 110,
+              minWidth: isMobile ? 100 : 110,
+              width: isMobile ? 100 : 110,
               borderRadius: 'var(--radius-md)',
               border: `2px solid ${isSelected
                 ? 'var(--accent-primary)'
@@ -97,9 +148,9 @@ const PageThumbnails = ({ pages = [], selectedPage, onSelect, onRotate, onDelete
               transition: 'all 200ms cubic-bezier(0.4,0,0.2,1)',
               overflow: 'hidden',
               userSelect: 'none',
+              touchAction: 'none',
             }}
           >
-            {/* Thumbnail image */}
             <div style={{ position: 'relative', height: 95, background: 'var(--bg-tertiary)' }}>
               {(page.processedImage || page.originalImage) ? (
                 <img
@@ -114,7 +165,6 @@ const PageThumbnails = ({ pages = [], selectedPage, onSelect, onRotate, onDelete
                 </div>
               )}
 
-              {/* Page number badge */}
               <div style={{
                 position: 'absolute', top: 5, left: 5,
                 background: isSelected ? 'var(--accent-primary)' : 'rgba(0,0,0,0.65)',
@@ -125,44 +175,41 @@ const PageThumbnails = ({ pages = [], selectedPage, onSelect, onRotate, onDelete
                 {index + 1}
               </div>
 
-              {/* Drag grip indicator */}
               <div style={{
                 position: 'absolute', top: 5, right: 5,
-                color: 'rgba(255,255,255,0.7)',
-                opacity: 0.6,
+                color: 'rgba(255,255,255,0.7)', opacity: 0.6,
               }}>
                 <GripVertical size={12} />
               </div>
             </div>
 
-            {/* Action buttons — compact inline */}
             <div style={{
-              display: 'flex', justifyContent: 'space-around',
-              padding: '5px 2px', background: 'var(--bg-secondary)',
+              display: 'flex', justifyContent: 'space-evenly',
+              padding: '6px 2px', background: 'var(--bg-secondary)',
             }}>
               <button
                 className="btn btn-ghost btn-sm"
-                style={{ padding: '3px 5px', minWidth: 0 }}
+                style={{ padding: isMobile ? '6px 8px' : '3px 5px', minWidth: 0, minHeight: 32 }}
                 title="Rotate 90°"
-                onClick={(e) => { e.stopPropagation(); onRotate?.(page._id); }}
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); onRotate?.(page._id); }}
               >
-                <RotateCw size={11} />
+                <RotateCw size={isMobile ? 14 : 11} />
               </button>
               <button
                 className="btn btn-ghost btn-sm"
-                style={{ padding: '3px 5px', minWidth: 0 }}
+                style={{ padding: isMobile ? '6px 8px' : '3px 5px', minWidth: 0, minHeight: 32 }}
                 title="Duplicate"
-                onClick={(e) => { e.stopPropagation(); onDuplicate?.(page._id); }}
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); onDuplicate?.(page._id); }}
               >
-                <Copy size={11} />
+                <Copy size={isMobile ? 14 : 11} />
               </button>
               <button
                 className="btn btn-ghost btn-sm"
-                style={{ padding: '3px 5px', minWidth: 0, color: 'var(--error)' }}
+                style={{ padding: isMobile ? '6px 8px' : '3px 5px', minWidth: 0, minHeight: 32, color: 'var(--error)' }}
                 title="Delete"
-                onClick={(e) => { e.stopPropagation(); onDelete?.(page._id); }}
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); onDelete?.(page._id); }}
               >
-                <Trash2 size={11} />
+                <Trash2 size={isMobile ? 14 : 11} />
               </button>
             </div>
           </div>

@@ -8,7 +8,8 @@ const FileGrid = ({
   files = [], loading, view = 'grid',
   isSelecting, selected = new Set(),
   onToggleSelect, onRename, onDelete,
-  onDownload, onShare, onToggleFavorite, onSplit
+  onDownload, onShare, onToggleFavorite, onSplit,
+  onShareFile
 }) => {
   if (loading) {
     const cols = view === 'list' ? 1 : 'repeat(auto-fill, minmax(210px, 1fr))';
@@ -52,7 +53,8 @@ const FileGrid = ({
   const commonProps = {
     isSelecting, selected,
     onToggleSelect, onRename, onDelete,
-    onDownload, onShare, onToggleFavorite, onSplit
+    onDownload, onShare, onToggleFavorite, onSplit,
+    onShareFile
   };
 
   if (view === 'list') {

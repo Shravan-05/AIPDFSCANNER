@@ -361,16 +361,16 @@ const DocumentEditor = () => {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {/* Toggle original vs processed */}
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => setShowProcessed(p => !p)}
             title={showProcessed ? 'Show original' : 'Show processed'}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, padding: '6px 8px' }}
           >
-            {showProcessed ? <Eye size={15} /> : <EyeOff size={15} />}
-            {showProcessed ? 'Processed' : 'Original'}
+            {showProcessed ? <Eye size={13} /> : <EyeOff size={13} />}
+            <span className="hide-mobile">{showProcessed ? 'Processed' : 'Original'}</span>
           </button>
 
           {/* Annotate */}
@@ -378,29 +378,31 @@ const DocumentEditor = () => {
             className="btn btn-secondary btn-sm"
             onClick={() => setShowAnnotator(true)}
             disabled={!selectedPage}
-            style={{ display: 'flex', alignItems: 'center', gap: 7 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}
           >
-            <PenTool size={15} /> Annotate
+            <PenTool size={14} /> <span className="hide-mobile">Annotate</span>
           </button>
 
-          {/* Password Protection */}
-          <input
-            type="password"
-            placeholder="PDF Password (Optional)"
-            className="input input-sm"
-            style={{ width: 180, fontSize: 13, height: 32 }}
-            value={pdfPassword}
-            onChange={e => setPdfPassword(e.target.value)}
-          />
+          {/* Password Protection - hidden on mobile, shown inline */}
+          <div className="hide-mobile">
+            <input
+              type="password"
+              placeholder="PDF Password"
+              className="input input-sm"
+              style={{ width: 140, fontSize: 12, height: 32 }}
+              value={pdfPassword}
+              onChange={e => setPdfPassword(e.target.value)}
+            />
+          </div>
 
           {/* Export PDF */}
           <button
-            className="btn btn-primary"
+            className="btn btn-primary btn-sm"
             onClick={handleExport}
             disabled={exporting || !activePages.length}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 140, justifyContent: 'center' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', fontSize: 12 }}
           >
-            {exporting ? <Loader size={16} className="spin" /> : <FileDown size={16} />}
+            {exporting ? <Loader size={14} className="spin" /> : <FileDown size={14} />}
             {exporting ? 'Exporting...' : 'Export PDF'}
           </button>
 
@@ -414,13 +416,13 @@ const DocumentEditor = () => {
             onChange={(e) => handleAddFiles(e.target.files)}
           />
           <button
-            className="btn btn-secondary"
+            className="btn btn-secondary btn-sm"
             disabled={addingPages}
             onClick={() => fileInputRef.current?.click()}
-            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', fontSize: 12 }}
           >
-            {addingPages ? <Loader size={16} className="spin" /> : <Sparkles size={16} />}
-            {addingPages ? 'Merging...' : 'Add Pages'}
+            {addingPages ? <Loader size={14} className="spin" /> : <Sparkles size={14} />}
+            {addingPages ? 'Merging...' : <span className="hide-mobile">Add Pages</span>}
           </button>
         </div>
       </div>
@@ -448,7 +450,7 @@ const DocumentEditor = () => {
       </div>
 
       {/* ── Main content: preview + enhancement panel ─────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18 }}>
 
         {/* Image preview */}
         <div className="glass-card" style={{ padding: 0, overflow: 'hidden', position: 'relative', minHeight: 480 }}>

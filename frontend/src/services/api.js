@@ -4,7 +4,8 @@ const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || window.location.origin + '/api',
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  timeout: 15000
 });
 
 api.interceptors.request.use(
@@ -21,8 +22,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.code === 'ECONNABORTED') {
+      return Promise.reject(new Error('Request timed out. Please check your connection.'));
+    }
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
+      localStorage.removeItem('auth_cache');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
@@ -43,11 +48,13 @@ export const authAPI = {
 export const scansAPI = {
   create: (formData, onProgress) => api.post('/scans', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: onProgress
+    onUploadProgress: onProgress,
+    timeout: 120000
   }),
   addPages: (id, formData, onProgress) => api.post(`/scans/${id}/pages`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: onProgress
+    onUploadProgress: onProgress,
+    timeout: 120000
   }),
   getAll: (params) => api.get('/scans', { params }),
   getOne: (id) => api.get(`/scans/${id}`),
@@ -83,10 +90,6 @@ export const settingsAPI = {
   testCloud: (cloudConfig) => api.post('/settings/test-cloud', { cloudConfig })
 };
 
-/**
- * Resolves a server-side file path/URL to a full URL accessible by the browser.
- * Handles Windows backslash paths and relative paths from both dev and production environments.
- */
 export const getFileUrl = (filePath) => {
   if (!filePath) return '';
   if (

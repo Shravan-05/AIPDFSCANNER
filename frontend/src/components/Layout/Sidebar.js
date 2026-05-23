@@ -109,6 +109,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
           <div style={{
             position: 'fixed', inset: 0, zIndex: 200,
             background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
           }} onClick={onClose} />
         )}
         <aside style={{
@@ -119,6 +120,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
           display: 'flex', flexDirection: 'column',
           transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
           transition: 'transform 250ms ease',
+          willChange: 'transform',
           boxShadow: mobileOpen ? '0 0 40px rgba(0,0,0,0.3)' : 'none'
         }}>
           {content}

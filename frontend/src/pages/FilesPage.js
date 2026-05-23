@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { filesAPI, scansAPI } from '../services/api';
 import FileGrid from '../components/Files/FileGrid';
 import SearchBar from '../components/UI/SearchBar';
+import ShareModal from '../components/Share/ShareModal';
 import { showToast } from '../components/UI/Toast';
 import {
   Grid3x3, List, Merge, Scissors, Trash2,
@@ -27,6 +28,9 @@ const FilesPage = () => {
   // Split confirmation
   const [splitTarget, setSplitTarget] = useState(null);
   const [splitting, setSplitting] = useState(false);
+
+  // Share modal
+  const [shareTarget, setShareTarget] = useState(null);
 
   useEffect(() => {
     loadFiles();
@@ -141,6 +145,11 @@ const FilesPage = () => {
     }
   };
 
+  const openShareModal = (id) => {
+    const file = files.find(f => f.id === id);
+    setShareTarget({ id: file.id, title: file.name, model: 'Scan' });
+  };
+
   const handleSplit = async (id) => {
     setSplitting(true);
     try {
@@ -226,29 +235,31 @@ const FilesPage = () => {
         onShare={handleShare}
         onToggleFavorite={handleToggleFavorite}
         onSplit={(id) => setSplitTarget(id)}
+        onShareFile={openShareModal}
       />
 
       {/* Floating Selection Action Bar */}
       {selected.size > 0 && (
         <div style={{
-          position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
+          position: 'fixed', bottom: 16, left: 12, right: 12,
           zIndex: 200, display: 'flex', alignItems: 'center', gap: 8,
-          padding: '10px 16px',
+          padding: '10px 14px',
           background: 'var(--bg-secondary)',
-          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)', backdropFilter: 'blur(24px)',
           border: '1px solid var(--border-color)',
-          borderRadius: 'var(--radius-full)',
-          boxShadow: '0 8px 40px rgba(0,0,0,0.3), 0 0 0 1px var(--accent-primary)30',
-          animation: 'slideUp 200ms ease-out'
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
+          animation: 'slideUp 200ms ease-out',
+          overflowX: 'auto'
         }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', paddingRight: 8 }}>
-            {selected.size} selected
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', paddingRight: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {selected.size}
           </span>
           {selected.size >= 2 && (
             <button
               className="btn btn-primary btn-sm"
               onClick={() => setShowMergeModal(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0 }}
             >
               <Merge size={15} /> Merge
             </button>
@@ -257,7 +268,7 @@ const FilesPage = () => {
             className="btn btn-sm"
             onClick={handleBatchDelete}
             style={{
-              display: 'flex', alignItems: 'center', gap: 6,
+              display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0,
               background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
               color: 'var(--error)'
             }}
@@ -267,6 +278,7 @@ const FilesPage = () => {
           <button
             className="btn btn-ghost btn-sm"
             onClick={clearSelection}
+            style={{ flexShrink: 0 }}
           >
             <X size={15} />
           </button>
@@ -342,6 +354,16 @@ const FilesPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Share Modal */}
+      {shareTarget && (
+        <ShareModal
+          pdfId={shareTarget.id}
+          pdfTitle={shareTarget.title}
+          model={shareTarget.model}
+          onClose={() => setShareTarget(null)}
+        />
       )}
 
       {/* Split Confirmation */}

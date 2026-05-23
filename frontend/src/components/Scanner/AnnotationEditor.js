@@ -119,29 +119,42 @@ const AnnotationEditor = ({ imageUrl, onSave, onCancel }) => {
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
       
       {/* Toolbar */}
-      <div style={{ padding: '16px 24px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button className={`btn btn-sm ${tool === 'highlight' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTool('highlight')}>
-            <Highlighter size={16} /> Highlight
+      <div style={{
+        padding: '10px 12px', background: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border-color)',
+        display: 'flex', flexWrap: 'wrap', gap: 8,
+        justifyContent: 'space-between', alignItems: 'center'
+      }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <button className={`btn btn-sm ${tool === 'highlight' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setTool('highlight')}
+            style={{ padding: '6px 10px', fontSize: 12 }}>
+            <Highlighter size={14} /> <span className="hide-mobile">Highlight</span>
           </button>
-          <button className={`btn btn-sm ${tool === 'eraser' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTool('eraser')}>
-            <Eraser size={16} /> Whiteout
+          <button className={`btn btn-sm ${tool === 'eraser' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setTool('eraser')}
+            style={{ padding: '6px 10px', fontSize: 12 }}>
+            <Eraser size={14} /> <span className="hide-mobile">Whiteout</span>
           </button>
-          <button className={`btn btn-sm ${tool === 'text' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTool('text')}>
-            <Type size={16} /> Add Text
+          <button className={`btn btn-sm ${tool === 'text' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setTool('text')}
+            style={{ padding: '6px 10px', fontSize: 12 }}>
+            <Type size={14} /> <span className="hide-mobile">Text</span>
           </button>
-          <div style={{ width: 1, background: 'var(--border-color)', margin: '0 8px' }} />
-          <button className="btn btn-sm btn-ghost" onClick={undo} title="Undo last action">
-            <Undo size={16} /> Undo
+          <button className="btn btn-sm btn-ghost" onClick={undo} title="Undo last action"
+            style={{ padding: '6px 10px', fontSize: 12 }}>
+            <Undo size={14} /> <span className="hide-mobile">Undo</span>
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button className="btn btn-ghost btn-sm" onClick={onCancel}>
-            <X size={16} /> Cancel
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className="btn btn-ghost btn-sm" onClick={onCancel}
+            style={{ padding: '6px 10px', fontSize: 12 }}>
+            <X size={14} /> <span className="hide-mobile">Cancel</span>
           </button>
-          <button className="btn btn-primary btn-sm" onClick={handleSave}>
-            <Check size={16} /> Save Edits
+          <button className="btn btn-primary btn-sm" onClick={handleSave}
+            style={{ padding: '6px 12px', fontSize: 12 }}>
+            <Check size={14} /> Save
           </button>
         </div>
       </div>
@@ -210,17 +223,18 @@ const AnnotationEditor = ({ imageUrl, onSave, onCancel }) => {
       {selectedTextIndex !== null && texts[selectedTextIndex] && (
         <div style={{
           position: 'absolute',
-          top: 80, left: '50%', transform: 'translateX(-50%)',
-          background: 'var(--bg-secondary)', padding: '12px 16px', 
+          top: 80, left: 12, right: 12,
+          background: 'var(--bg-secondary)', padding: '10px 14px', 
           borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-xl)',
           border: '1px solid var(--border-color)',
-          display: 'flex', gap: 16, alignItems: 'center', zIndex: 1001
+          display: 'flex', gap: 10, alignItems: 'center', zIndex: 1001,
+          flexWrap: 'wrap'
         }}>
           <input
             autoFocus
             type="text"
             className="input input-sm"
-            style={{ minWidth: 200, fontWeight: 600 }}
+            style={{ flex: '1 1 100%', minWidth: 120, fontWeight: 600 }}
             value={texts[selectedTextIndex].text}
             onChange={(e) => {
               const newTexts = [...texts];
@@ -228,44 +242,45 @@ const AnnotationEditor = ({ imageUrl, onSave, onCancel }) => {
               setTexts(newTexts);
             }}
           />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Color</label>
-            <input 
-              type="color" 
-              style={{ width: 30, height: 30, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer' }}
-              value={texts[selectedTextIndex].fill}
-              onChange={(e) => {
-                const newTexts = [...texts];
-                newTexts[selectedTextIndex].fill = e.target.value;
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Color</label>
+              <input 
+                type="color" 
+                style={{ width: 28, height: 28, padding: 0, border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                value={texts[selectedTextIndex].fill}
+                onChange={(e) => {
+                  const newTexts = [...texts];
+                  newTexts[selectedTextIndex].fill = e.target.value;
+                  setTexts(newTexts);
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>Size</label>
+              <input 
+                type="range" min="12" max="150" 
+                style={{ width: 80 }}
+                value={texts[selectedTextIndex].fontSize}
+                onChange={(e) => {
+                  const newTexts = [...texts];
+                  newTexts[selectedTextIndex].fontSize = parseInt(e.target.value, 10);
+                  setTexts(newTexts);
+                }}
+              />
+            </div>
+            <button 
+              className="btn btn-sm" 
+              style={{ color: 'var(--error)', background: 'transparent', border: '1px solid var(--error)', fontSize: 12, padding: '4px 10px' }}
+              onClick={() => {
+                const newTexts = texts.filter((_, idx) => idx !== selectedTextIndex);
                 setTexts(newTexts);
+                setSelectedTextIndex(null);
               }}
-            />
+            >
+              Delete
+            </button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Size</label>
-            <input 
-              type="range" min="12" max="150" 
-              style={{ width: 100 }}
-              value={texts[selectedTextIndex].fontSize}
-              onChange={(e) => {
-                const newTexts = [...texts];
-                newTexts[selectedTextIndex].fontSize = parseInt(e.target.value, 10);
-                setTexts(newTexts);
-              }}
-            />
-          </div>
-          <div style={{ width: 1, height: 24, background: 'var(--border-color)' }} />
-          <button 
-            className="btn btn-sm" 
-            style={{ color: 'var(--error-color)', background: 'transparent', border: '1px solid var(--error-color)' }}
-            onClick={() => {
-              const newTexts = texts.filter((_, idx) => idx !== selectedTextIndex);
-              setTexts(newTexts);
-              setSelectedTextIndex(null);
-            }}
-          >
-            Delete
-          </button>
         </div>
       )}
     </div>
