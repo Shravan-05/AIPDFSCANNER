@@ -64,27 +64,38 @@ if (!process.env.MONGODB_URI) {
   console.error('Set it in your deployment dashboard (Render/Railway) or in backend/.env for local dev.');
   process.exit(1);
 }
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your_jwt_secret_key_here') {
+  console.error('FATAL: JWT_SECRET environment variable is not set or still default.');
+  console.error('Generate a strong random secret and set it in your deployment dashboard.');
+  process.exit(1);
+}
+
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.log('MongoDB connection error:', err));
-
-const server = app.listen(PORT, () => {
-  console.log(`AuraScan AI server running on port ${PORT} (${NODE_ENV})`);
-});
-
-const gracefulShutdown = (signal) => {
-  console.log(`\n${signal} received. Shutting down gracefully...`);
-  server.close(() => {
-    mongoose.connection.close(false).then(() => {
-      console.log('Server closed');
-      process.exit(0);
+  .then(() => {
+    console.log('MongoDB connected');
+    const server = app.listen(PORT, () => {
+      console.log(`AuraScan AI server running on port ${PORT} (${NODE_ENV})`);
     });
-  });
-  setTimeout(() => {
-    console.error('Forced shutdown after timeout');
-    process.exit(1);
-  }, 10000);
-};
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    const gracefulShutdown = (signal) => {
+      console.log(`\n${signal} received. Shutting down gracefully...`);
+      server.close(() => {
+        mongoose.connection.close(false).then(() => {
+          console.log('Server closed');
+          process.exit(0);
+        });
+      });
+      setTimeout(() => {
+        console.error('Forced shutdown after timeout');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err.message);
+    console.error('Server will not start. Check your MONGODB_URI and network access in Atlas.');
+    process.exit(1);
+  });
