@@ -163,25 +163,4 @@ exports.renameFile = async (req, res) => {
   }
 };
 
-exports.shareFile = async (req, res) => {
-  try {
-    const scan = await Scan.findOne({ _id: req.params.id, user: req.user.id });
-    if (!scan) {
-      const pdfDoc = await PdfDocument.findOne({ _id: req.params.id, user: req.user.id });
-      if (!pdfDoc) {
-        return res.status(404).json({ msg: 'File not found' });
-      }
 
-      const shareToken = Buffer.from(`${pdfDoc._id}-${Date.now()}`).toString('base64').replace(/=/g, '');
-      const shareUrl = `${req.protocol}://${req.get('host')}/api/files/shared/${shareToken}`;
-      return res.json({ shareUrl, token: shareToken, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
-    }
-
-    const shareToken = Buffer.from(`${scan._id}-${Date.now()}`).toString('base64').replace(/=/g, '');
-    const shareUrl = `${req.protocol}://${req.get('host')}/api/files/shared/${shareToken}`;
-    res.json({ shareUrl, token: shareToken, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
-  } catch (err) {
-    console.error('Share file error:', err);
-    res.status(500).json({ msg: 'Server error' });
-  }
-};

@@ -23,10 +23,6 @@ const shareSchema = new mongoose.Schema({
     unique: true,
     index: true
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
   expiresAt: {
     type: Date,
     default: null
@@ -56,6 +52,7 @@ const shareSchema = new mongoose.Schema({
 });
 
 shareSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+shareSchema.index({ ownerId: 1, createdAt: -1 });
 
 shareSchema.methods.isExpired = function() {
   if (!this.expiresAt) return false;

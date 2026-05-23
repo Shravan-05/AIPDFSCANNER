@@ -80,8 +80,7 @@ export const filesAPI = {
   getAll: (params) => api.get('/files', { params }),
   download: (id) => api.get(`/files/${id}/download`, { responseType: 'blob' }),
   delete: (id) => api.delete(`/files/${id}`),
-  rename: (id, name) => api.put(`/files/${id}/rename`, { name }),
-  share: (id) => api.post(`/files/${id}/share`)
+  rename: (id, name) => api.put(`/files/${id}/rename`, { name })
 };
 
 export const settingsAPI = {

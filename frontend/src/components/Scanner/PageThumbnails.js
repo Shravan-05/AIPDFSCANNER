@@ -157,6 +157,7 @@ const PageThumbnails = ({ pages = [], selectedPage, onSelect, onRotate, onDelete
                   src={getFileUrl(page.processedImage || page.originalImage)}
                   alt={`Page ${page.pageNumber}`}
                   draggable={false}
+                  loading="lazy"
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               ) : (

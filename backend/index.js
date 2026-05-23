@@ -98,7 +98,7 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your_jwt_secret_key_h
 }
 
 mongoose.connect(process.env.MONGODB_URI, {
-  maxPoolSize: 10,
+  maxPoolSize: 50,
   minPoolSize: 2,
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,

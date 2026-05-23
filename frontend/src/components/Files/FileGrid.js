@@ -8,7 +8,7 @@ const FileGrid = ({
   files = [], loading, view = 'grid',
   isSelecting, selected = new Set(),
   onToggleSelect, onRename, onDelete,
-  onDownload, onShare, onToggleFavorite, onSplit,
+  onDownload, onToggleFavorite, onSplit,
   onShareFile
 }) => {
   if (loading) {
@@ -53,7 +53,7 @@ const FileGrid = ({
   const commonProps = {
     isSelecting, selected,
     onToggleSelect, onRename, onDelete,
-    onDownload, onShare, onToggleFavorite, onSplit,
+    onDownload, onToggleFavorite, onSplit,
     onShareFile
   };
 
@@ -84,7 +84,8 @@ const FileGrid = ({
 // List-view row component
 const FileListRow = ({
   file, isSelecting, selected, onToggleSelect,
-  onRename, onDelete, onDownload, onShare, onToggleFavorite, onSplit
+  onRename, onDelete, onDownload, onToggleFavorite, onSplit,
+  onShareFile
 }) => {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
@@ -164,7 +165,7 @@ const FileListRow = ({
           <button className="btn btn-ghost btn-sm" style={{ padding: 6 }} onClick={() => onDownload?.(file.id)}>
             <Download size={14} />
           </button>
-          <button className="btn btn-ghost btn-sm" style={{ padding: 6 }} onClick={() => onShare?.(file.id)}>
+          <button className="btn btn-ghost btn-sm" style={{ padding: 6 }} onClick={() => onShareFile?.(file.id)}>
             <Share2 size={14} />
           </button>
           <div style={{ position: 'relative' }}>

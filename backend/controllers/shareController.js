@@ -1,8 +1,24 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const path = require('path');
+const fs = require('fs');
 const Share = require('../models/Share');
 const Scan = require('../models/Scan');
 const PdfDocument = require('../models/PdfDocument');
+
+const buildShareUrl = (req, token) => {
+  const frontendOrigin = process.env.FRONTEND_URL ||
+    (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== '*' ? process.env.CORS_ORIGIN.split(',')[0].trim() : '');
+  const base = frontendOrigin || `${req.protocol}://${req.get('host')}`;
+  return `${base}/share/${token}`;
+};
+
+const buildDownloadUrl = (req, token) => {
+  const frontendOrigin = process.env.FRONTEND_URL ||
+    (process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== '*' ? process.env.CORS_ORIGIN.split(',')[0].trim() : '');
+  const base = frontendOrigin || `${req.protocol}://${req.get('host')}`;
+  return `${base}/api/share/${token}/download`;
+};
 
 const sanitizePdfData = (doc, modelName) => {
   const base = {
@@ -22,8 +38,8 @@ const sanitizePdfData = (doc, modelName) => {
   };
 
   if (modelName === 'PdfDocument') {
-    base.filePath = doc.filePath;
-    base.fileName = doc.fileName;
+    base.filePath = doc.filepath;
+    base.fileName = doc.originalFilename;
   }
 
   return base;
@@ -31,9 +47,9 @@ const sanitizePdfData = (doc, modelName) => {
 
 const getPdfById = async (pdfId, modelName) => {
   if (modelName === 'Scan') {
-    return Scan.findById(pdfId).select('-ocrText');
+    return Scan.findById(pdfId).select('-ocrText').populate('user', '_id');
   }
-  return PdfDocument.findById(pdfId);
+  return PdfDocument.findById(pdfId).populate('user', '_id');
 };
 
 exports.createShareLink = async (req, res) => {
@@ -46,14 +62,14 @@ exports.createShareLink = async (req, res) => {
       return res.status(404).json({ msg: 'PDF not found' });
     }
 
-    const ownerId = pdf.userId || pdf.ownerId || pdf.user?._id || req.user.id;
-    if (ownerId.toString() !== req.user.id) {
+    const ownerId = pdf.user?._id || pdf.user;
+    if (!ownerId || ownerId.toString() !== req.user.id) {
       return res.status(403).json({ msg: 'Not authorized to share this PDF' });
     }
 
     const existing = await Share.findOne({ pdfId: id, pdfModel: model, ownerId: req.user.id, isActive: true });
     if (existing && !existing.isExpired()) {
-      const shareUrl = `${req.protocol}://${req.get('host')}/share/${existing.shareToken}`;
+      const shareUrl = buildShareUrl(req, existing.shareToken);
       return res.json({
         success: true,
         shareUrl,
@@ -89,7 +105,7 @@ exports.createShareLink = async (req, res) => {
 
     await share.save();
 
-    const shareUrl = `${req.protocol}://${req.get('host')}/share/${token}`;
+    const shareUrl = buildShareUrl(req, token);
 
     res.status(201).json({
       success: true,
@@ -135,19 +151,17 @@ exports.accessSharedPdf = async (req, res) => {
       });
     }
 
-    share.accessCount += 1;
-    share.lastAccessedAt = new Date();
-    await share.save();
-
     const pdf = await getPdfById(share.pdfId, share.pdfModel);
     if (!pdf) {
       return res.status(404).json({ msg: 'The shared PDF no longer exists', errorCode: 'PDF_NOT_FOUND' });
     }
 
-    const host = `${req.protocol}://${req.get('host')}`;
-    const downloadUrl = share.pdfModel === 'Scan'
-      ? `${host}/api/scans/${share.pdfId}/export`
-      : `${host}/api/files/${share.pdfId}/download`;
+    await Share.updateOne(
+      { _id: share._id },
+      { $inc: { accessCount: 1 }, $set: { lastAccessedAt: new Date() } }
+    );
+
+    const downloadUrl = buildDownloadUrl(req, token);
 
     res.json({
       requiresPassword: false,
@@ -156,7 +170,7 @@ exports.accessSharedPdf = async (req, res) => {
       previewUrl: downloadUrl,
       shareInfo: {
         createdAt: share.createdAt,
-        accessCount: share.accessCount,
+        accessCount: share.accessCount + 1,
         modelName: share.pdfModel
       }
     });
@@ -197,19 +211,17 @@ exports.verifyPassword = async (req, res) => {
       return res.status(401).json({ msg: 'Incorrect password' });
     }
 
-    share.accessCount += 1;
-    share.lastAccessedAt = new Date();
-    await share.save();
-
     const pdf = await getPdfById(share.pdfId, share.pdfModel);
     if (!pdf) {
       return res.status(404).json({ msg: 'The shared PDF no longer exists' });
     }
 
-    const host = `${req.protocol}://${req.get('host')}`;
-    const downloadUrl = share.pdfModel === 'Scan'
-      ? `${host}/api/scans/${share.pdfId}/export`
-      : `${host}/api/files/${share.pdfId}/download`;
+    await Share.updateOne(
+      { _id: share._id },
+      { $inc: { accessCount: 1 }, $set: { lastAccessedAt: new Date() } }
+    );
+
+    const downloadUrl = buildDownloadUrl(req, token);
 
     res.json({
       verified: true,
@@ -218,12 +230,53 @@ exports.verifyPassword = async (req, res) => {
       previewUrl: downloadUrl,
       shareInfo: {
         createdAt: share.createdAt,
-        accessCount: share.accessCount,
+        accessCount: share.accessCount + 1,
         modelName: share.pdfModel
       }
     });
   } catch (err) {
     console.error('Verify password error:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.downloadSharedPdf = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const share = await Share.findOne({ shareToken: token, isActive: true });
+    if (!share) return res.status(404).json({ msg: 'Share link not found' });
+    if (share.isExpired()) return res.status(410).json({ msg: 'Share link has expired' });
+    if (share.isAccessLimitReached()) return res.status(410).json({ msg: 'View limit reached' });
+    if (share.passwordHash) {
+      const { password } = req.query;
+      if (!password) return res.status(401).json({ msg: 'Password required' });
+      const isValid = await bcrypt.compare(password, share.passwordHash);
+      if (!isValid) return res.status(401).json({ msg: 'Incorrect password' });
+    }
+
+    const pdf = await getPdfById(share.pdfId, share.pdfModel);
+    if (!pdf) return res.status(404).json({ msg: 'PDF no longer exists' });
+
+    await Share.updateOne(
+      { _id: share._id },
+      { $inc: { accessCount: 1 }, $set: { lastAccessedAt: new Date() } }
+    );
+
+    if (share.pdfModel === 'Scan') {
+      if (pdf.pdfUrl) return res.download(pdf.pdfUrl, `${pdf.title}.pdf`);
+      return res.status(404).json({ msg: 'PDF not yet generated' });
+    }
+
+    const uploadDir = process.env.UPLOAD_DIR || './uploads';
+    const fullPath = path.join(uploadDir, pdf.currentFilename);
+    try {
+      await fs.promises.access(fullPath);
+      return res.download(fullPath, pdf.originalFilename);
+    } catch {
+      return res.status(404).json({ msg: 'File not found on disk' });
+    }
+  } catch (err) {
+    console.error('Download shared PDF error:', err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -293,9 +346,9 @@ exports.getUserShares = async (req, res) => {
       .limit(50)
       .lean();
 
-    const pdfIds = shares.map(s => s.pdfId.toString());
-    const scans = await Scan.find({ _id: { $in: pdfIds } }).select('title createdAt').lean();
-    const docs = await PdfDocument.find({ _id: { $in: pdfIds } }).select('title createdAt').lean();
+    const pdfIds = shares.map(s => s.pdfId?.toString()).filter(Boolean);
+    const scans = pdfIds.length ? await Scan.find({ _id: { $in: pdfIds } }).select('title createdAt').lean() : [];
+    const docs = pdfIds.length ? await PdfDocument.find({ _id: { $in: pdfIds } }).select('title createdAt').lean() : [];
     const pdfMap = {};
     [...scans, ...docs].forEach(p => { pdfMap[p._id.toString()] = p; });
 

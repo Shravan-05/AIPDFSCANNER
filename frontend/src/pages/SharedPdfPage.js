@@ -76,10 +76,18 @@ const SharedPdfPage = () => {
     }
   };
 
+  const getDownloadUrl = () => {
+    const base = downloadUrl;
+    if (!base) return '';
+    const pwd = password?.trim();
+    return pwd ? `${base}?password=${encodeURIComponent(pwd)}` : base;
+  };
+
   const handleDownload = () => {
-    if (downloadUrl) {
+    const url = getDownloadUrl();
+    if (url) {
       const a = document.createElement('a');
-      a.href = downloadUrl;
+      a.href = url;
       a.target = '_blank';
       a.download = `${pdfData?.title || 'document'}.pdf`;
       a.click();
@@ -87,8 +95,9 @@ const SharedPdfPage = () => {
   };
 
   const handlePreview = () => {
-    if (downloadUrl) {
-      window.open(downloadUrl, '_blank');
+    const url = getDownloadUrl();
+    if (url) {
+      window.open(url, '_blank');
     }
   };
 
@@ -114,9 +123,14 @@ const SharedPdfPage = () => {
           <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
             {error}
           </p>
-          <Link to="/" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <ArrowLeft size={16} /> Go to AuraScan
-          </Link>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button className="btn btn-secondary" onClick={loadSharedPdf} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <Loader size={16} /> Try Again
+            </button>
+            <Link to="/" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <ArrowLeft size={16} /> Go to AuraScan
+            </Link>
+          </div>
         </div>
       </div>
     );

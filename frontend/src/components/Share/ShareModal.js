@@ -82,8 +82,12 @@ const ShareModal = ({ pdfId, pdfTitle, model = 'Scan', onClose }) => {
 
   const handleRegenerate = async () => {
     if (!window.confirm('Generate a new link? The current one will stop working.')) return;
-    await shareAPI.revoke(shareToken);
-    setStep('create');
+    try {
+      await shareAPI.revoke(shareToken);
+      setStep('create');
+    } catch {
+      showToast.error('Failed to revoke old link');
+    }
   };
 
   const handleNativeShare = async () => {
@@ -183,7 +187,7 @@ const ShareModal = ({ pdfId, pdfTitle, model = 'Scan', onClose }) => {
                 </label>
                 <input
                   className="input"
-                  type="text"
+                  type="password"
                   placeholder="Set a password to protect this share"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

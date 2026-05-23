@@ -15,6 +15,8 @@ const FilesPage = () => {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('-createdAt');
   const [view, setView] = useState('grid');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Batch selection state
   const [selected, setSelected] = useState(new Set());
@@ -33,15 +35,22 @@ const FilesPage = () => {
   const [shareTarget, setShareTarget] = useState(null);
 
   useEffect(() => {
-    loadFiles();
+    setPage(1);
+    loadFiles(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, sort]);
 
-  const loadFiles = async () => {
+  useEffect(() => {
+    loadFiles(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
+  const loadFiles = async (p = 1) => {
     setLoading(true);
     try {
-      const res = await filesAPI.getAll({ search, sort, limit: 100 });
+      const res = await filesAPI.getAll({ search, sort, limit: 20, page: p });
       setFiles(res.data.files || []);
+      setTotalPages(res.data.pages || 1);
     } catch (err) {
       showToast.error('Failed to load files');
     } finally {
@@ -93,16 +102,6 @@ const FilesPage = () => {
       showToast.success('Download started');
     } catch (err) {
       showToast.error('Failed to download file. Export the document first.');
-    }
-  };
-
-  const handleShare = async (id) => {
-    try {
-      const res = await filesAPI.share(id);
-      await navigator.clipboard.writeText(res.data.shareUrl);
-      showToast.success('Share link copied to clipboard');
-    } catch (err) {
-      showToast.error('Failed to generate share link');
     }
   };
 
@@ -185,7 +184,7 @@ const FilesPage = () => {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {isSelecting ? (
-            <button className="btn btn-secondary btn-sm" onClick={clearSelection} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button className="btn btn-secondary btn-sm" onClick={clearSelection}>
               <X size={14} /> Cancel
             </button>
           ) : (
@@ -211,7 +210,10 @@ const FilesPage = () => {
       {/* Filters */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
         <SearchBar value={search} onChange={setSearch} placeholder="Search files..." style={{ flex: '1 1 100%' }} />
-        <select className="input" value={sort} onChange={(e) => setSort(e.target.value)} style={{ width: '100%' }}>
+        <select className="input" value={sort} onChange={(e) => setSort(e.target.value)} style={{
+          '@media (min-width: 480px)': { width: 'auto' },
+          width: '100%'
+        }}>
           <option value="-createdAt">Newest First</option>
           <option value="createdAt">Oldest First</option>
           <option value="title">Name A-Z</option>
@@ -232,11 +234,38 @@ const FilesPage = () => {
         onRename={handleRename}
         onDelete={handleDelete}
         onDownload={handleDownload}
-        onShare={handleShare}
         onToggleFavorite={handleToggleFavorite}
         onSplit={(id) => setSplitTarget(id)}
         onShareFile={openShareModal}
       />
+
+      {/* Pagination */}
+      {totalPages > 1 && !loading && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 8, marginTop: 24, flexWrap: 'wrap'
+        }}>
+          <button
+            className="btn btn-sm btn-secondary"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            style={{ minWidth: 70, justifyContent: 'center' }}
+          >
+            Previous
+          </button>
+          <span style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '0 8px' }}>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            className="btn btn-sm btn-secondary"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            style={{ minWidth: 70, justifyContent: 'center' }}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Floating Selection Action Bar */}
       {selected.size > 0 && (

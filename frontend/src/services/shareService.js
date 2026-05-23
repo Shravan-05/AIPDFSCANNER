@@ -21,10 +21,7 @@ export const shareAPI = {
 };
 
 export const getShareUrl = (token) => {
-  const base = process.env.REACT_APP_API_URL
-    ? process.env.REACT_APP_API_URL.replace('/api', '')
-    : window.location.origin;
-  return `${base}/share/${token}`;
+  return `${window.location.origin}/share/${token}`;
 };
 
 export default shareAPI;

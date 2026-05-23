@@ -406,6 +406,63 @@ a:hover {
   h2 { font-size: 16px !important; }
 }
 
+@media (max-width: 300px) {
+  :root {
+    --page-padding: 6px;
+    --grid-col-min: 100px;
+    --navbar-height: 48px;
+  }
+  .page-container { padding: 6px !important; }
+  .glass-card { padding: 8px !important; }
+  .glass { padding: 8px !important; }
+  .btn { padding: 6px 10px !important; font-size: 0.7rem !important; min-height: 32px; }
+  .btn-sm { padding: 4px 8px !important; font-size: 0.65rem !important; }
+  .btn-lg { padding: 8px 14px !important; font-size: 0.75rem !important; }
+  .input { padding: 6px 10px !important; font-size: 0.7rem !important; }
+  h1 { font-size: 15px !important; }
+  h2 { font-size: 14px !important; }
+  h3 { font-size: 13px !important; }
+  body { font-size: 12px; }
+}
+
+@media (max-width: 240px) {
+  :root {
+    --page-padding: 4px;
+    --grid-col-min: 80px;
+    --spacing-md: 8px;
+    --spacing-lg: 12px;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 10px;
+  }
+  .page-container { padding: 4px !important; }
+  .glass-card { padding: 6px !important; }
+  .btn { padding: 4px 6px !important; font-size: 0.6rem !important; min-height: 28px; }
+  .btn-sm { padding: 3px 6px !important; }
+  .btn-lg { padding: 6px 10px !important; font-size: 0.65rem !important; }
+  .input { padding: 4px 8px !important; font-size: 0.6rem !important; }
+  h1 { font-size: 13px !important; }
+  h2 { font-size: 12px !important; }
+  h3 { font-size: 11px !important; }
+  body { font-size: 11px; }
+}
+
+@media (max-width: 200px) {
+  :root {
+    --page-padding: 2px;
+    --grid-col-min: 60px;
+  }
+  .page-container { padding: 2px !important; }
+  .glass-card { padding: 4px !important; }
+  .btn { padding: 3px 4px !important; font-size: 0.55rem !important; min-height: 24px; gap: 3px; }
+  .input { padding: 3px 6px !important; font-size: 0.55rem !important; }
+  h1 { font-size: 11px !important; }
+  h2 { font-size: 10px !important; }
+  h3 { font-size: 10px !important; }
+  body { font-size: 10px; }
+  [style*="gap"] { gap: 4px !important; }
+}
+
 @media (min-width: 769px) {
   .hide-desktop {
     display: none !important;
@@ -525,5 +582,30 @@ a:hover {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+.modal-overlay { animation: fadeIn 200ms ease; }
+.modal-content { animation: scaleIn 200ms ease; }
+
+.timeline-item {
+  animation: fadeSlideIn 300ms ease both;
+}
+.timeline-item:nth-child(1) { animation-delay: 0s; }
+.timeline-item:nth-child(2) { animation-delay: 0.05s; }
+.timeline-item:nth-child(3) { animation-delay: 0.1s; }
+.timeline-item:nth-child(4) { animation-delay: 0.15s; }
+.timeline-item:nth-child(5) { animation-delay: 0.2s; }
+
+.suggestions-grid {
+  animation: fadeIn 300ms ease;
+}
+.suggestion-card {
+  transition: all 0.2s ease !important;
+}
+@media (hover: hover) {
+  .suggestion-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(99, 102, 241, 0.15);
   }
 }

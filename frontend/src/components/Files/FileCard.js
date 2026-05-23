@@ -7,7 +7,7 @@ import {
 import { getFileUrl } from '../../services/api';
 
 const FileCard = ({
-  file, onRename, onDelete, onDownload, onShare,
+  file, onRename, onDelete, onDownload,
   onToggleFavorite, onSplit, isSelecting, isSelected, onToggleSelect,
   onShareFile
 }) => {
