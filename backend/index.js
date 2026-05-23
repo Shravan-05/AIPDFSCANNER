@@ -59,6 +59,11 @@ if (fs.existsSync(frontendBuild)) {
 
 app.use(errorHandler);
 
+if (!process.env.MONGODB_URI) {
+  console.error('FATAL: MONGODB_URI environment variable is not set.');
+  console.error('Set it in your deployment dashboard (Render/Railway) or in backend/.env for local dev.');
+  process.exit(1);
+}
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.log('MongoDB connection error:', err));
