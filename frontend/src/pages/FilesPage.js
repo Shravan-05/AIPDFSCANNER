@@ -60,13 +60,8 @@ const FilesPage = () => {
     if (!selected.size) return;
     if (!window.confirm(`Delete ${selected.size} file(s)?`)) return;
     const ids = Array.from(selected);
-    let successCount = 0;
-    for (const id of ids) {
-      try {
-        await filesAPI.delete(id);
-        successCount++;
-      } catch {}
-    }
+    const results = await Promise.allSettled(ids.map(id => filesAPI.delete(id)));
+    const successCount = results.filter(r => r.status === 'fulfilled').length;
     setFiles(prev => prev.filter(f => !selected.has(f.id)));
     setSelected(new Set());
     showToast.success(`Deleted ${successCount} file(s)`);

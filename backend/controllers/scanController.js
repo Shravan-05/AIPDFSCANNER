@@ -5,7 +5,7 @@ const fs = require('fs');
 const { validationResult } = require('express-validator');
 const { processImage, processImageCustom } = require('../services/imageProcessor');
 const { generatePdf } = require('../services/pdfGenerator');
-const { extractText } = require('../services/ocrService');
+const { extractText, batchExtract } = require('../services/ocrService');
 const { calculateStorageUsed } = require('../utils/helpers');
 const { uploadToCloud } = require('../services/cloudStorageService');
 
@@ -27,7 +27,6 @@ exports.createScan = async (req, res) => {
     });
     let totalSize = 0;
     
-    // Process images concurrently
     const processPromises = req.files.map(async (file, i) => {
       const pageNumber = i + 1;
       const result = await processImage(file.path, {
@@ -47,11 +46,10 @@ exports.createScan = async (req, res) => {
         processedImage: result.processedPath,
         thumbnailUrl: result.thumbnailPath,
         pageNumber,
-        ocrText: '', // Filled asynchronously
+        ocrText: '',
         enhancement: { brightness: 1.0, contrast: 1.0, saturation: 1.0, sharpness: 1.0 }
       });
     }
-    // Auto-arrange pages intelligently in-place on upload
     const getPageNumberMarker = (page) => {
       if (page.ocrText) {
         const match = page.ocrText.match(/(?:page|pg\.?)\s*(\d+)/i) || 
@@ -72,7 +70,6 @@ exports.createScan = async (req, res) => {
 
     scan.pages.sort((a, b) => getPageNumberMarker(a) - getPageNumberMarker(b));
     
-    // Re-index page numbers after sequencing
     scan.pages.forEach((p, idx) => {
       p.pageNumber = idx + 1;
     });
@@ -90,21 +87,10 @@ exports.createScan = async (req, res) => {
     
     res.status(201).json(scan);
 
-    // Run OCR asynchronously in the background so it doesn't block the request
     if (ocrEnabled) {
-      (async () => {
-        try {
-          const ocrLang = user?.preferences?.ocrLanguage || 'eng';
-          for (const page of scan.pages) {
-            const ocr = await extractText(page.processedImage, ocrLang);
-            page.ocrText = ocr.text;
-          }
-          scan.ocrText = scan.pages.map(p => p.ocrText).filter(Boolean).join(' ');
-          await scan.save();
-        } catch (err) {
-          console.error('Background OCR Error:', err);
-        }
-      })();
+      const ocrLang = user?.preferences?.ocrLanguage || 'eng';
+      const ocrPages = scan.pages.filter(p => p.processedImage);
+      exports._runBackgroundOcr(scan._id, ocrPages, ocrLang);
     }
   } catch (err) {
     console.error('Create scan error:', err);
@@ -112,6 +98,25 @@ exports.createScan = async (req, res) => {
       return res.status(400).json({ msg: 'Invalid file uploaded. Please upload image files (JPEG, PNG, WebP) only, not raw PDFs.' });
     }
     res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports._runBackgroundOcr = async (scanId, pages, lang) => {
+  try {
+    const results = await batchExtract(
+      pages.map(p => p.processedImage),
+      lang
+    );
+    const scan = await Scan.findById(scanId);
+    if (!scan) return;
+    results.forEach((ocr, i) => {
+      if (pages[i]) pages[i].ocrText = ocr.text;
+    });
+    scan.ocrText = pages.map(p => p.ocrText).filter(Boolean).join(' ');
+    scan.markModified('pages');
+    await scan.save();
+  } catch (err) {
+    console.error('Background OCR Error:', err);
   }
 };
 
@@ -126,11 +131,8 @@ exports.addPages = async (req, res) => {
 
     const scanMode = scan.scanMode || 'color';
     let totalSize = 0;
-    
-    // Determine starting page number based on current pages
     let pageCounter = scan.pages.length + 1;
 
-    // Process images concurrently
     const processPromises = req.files.map(async (file) => {
       const result = await processImage(file.path, {
         autoCropEnabled: true,
@@ -142,16 +144,19 @@ exports.addPages = async (req, res) => {
     
     const processedResults = await Promise.all(processPromises);
 
+    const newPages = [];
     for (const { file, result } of processedResults) {
       totalSize += file.size;
-      scan.pages.push({
+      const page = {
         originalImage: file.path,
         processedImage: result.processedPath,
         thumbnailUrl: result.thumbnailPath,
         pageNumber: pageCounter++,
-        ocrText: '', // Filled asynchronously
+        ocrText: '',
         enhancement: { brightness: 1.0, contrast: 1.0, saturation: 1.0, sharpness: 1.0 }
-      });
+      };
+      scan.pages.push(page);
+      newPages.push(page);
     }
 
     scan.totalPages = scan.pages.filter(p => !p.isDeleted).length;
@@ -166,22 +171,11 @@ exports.addPages = async (req, res) => {
 
     res.status(200).json(scan);
 
-    // Run OCR asynchronously in the background
-    (async () => {
-      try {
-        const ocrLang = user?.preferences?.ocrLanguage || 'eng';
-        for (const page of scan.pages) {
-          if (!page.ocrText) {
-            const ocr = await extractText(page.processedImage, ocrLang);
-            page.ocrText = ocr.text;
-          }
-        }
-        scan.ocrText = scan.pages.map(p => p.ocrText).filter(Boolean).join(' ');
-        await scan.save();
-      } catch (err) {
-        console.error('Background OCR Error:', err);
-      }
-    })();
+    const newOcrPages = newPages.filter(p => p.processedImage);
+    if (newOcrPages.length > 0) {
+      const ocrLang = user?.preferences?.ocrLanguage || 'eng';
+      exports._runBackgroundOcr(scan._id, newOcrPages, ocrLang);
+    }
   } catch (err) {
     console.error('Add pages error:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -402,7 +396,6 @@ exports.exportPdf = async (req, res) => {
     scan.exportHistory.push({ url: pdfPath, format: 'pdf', createdAt: new Date() });
     await scan.save();
 
-    // Trigger background cloud upload if configured
     const cloudConfig = user.preferences?.cloudStorage;
     if (cloudConfig?.provider && cloudConfig.provider !== 'none') {
       const fileName = `${scan.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
@@ -464,31 +457,27 @@ exports.updatePage = async (req, res) => {
       return res.status(404).json({ msg: 'Page not found' });
     }
     
-    // Process image custom with sharp
     const result = await processImageCustom(page.originalImage, {
       cropCoordinates,
       enhancement,
       scanMode
     });
     
-    // Clean up old processed and thumbnail files if they exist and are different
     const oldProcessed = page.processedImage;
     const oldThumb = page.thumbnailUrl;
     
-    if (oldProcessed && oldProcessed !== page.originalImage && fs.existsSync(oldProcessed)) {
-      try { fs.unlinkSync(oldProcessed); } catch (e) {}
-    }
-    if (oldThumb && oldThumb !== page.originalImage && fs.existsSync(oldThumb)) {
-      try { fs.unlinkSync(oldThumb); } catch (e) {}
-    }
+    await Promise.all([
+      oldProcessed && oldProcessed !== page.originalImage
+        ? fs.promises.unlink(oldProcessed).catch(() => {}) : Promise.resolve(),
+      oldThumb && oldThumb !== page.originalImage
+        ? fs.promises.unlink(oldThumb).catch(() => {}) : Promise.resolve()
+    ]);
     
-    // Update model fields
     page.processedImage = result.processedPath;
     page.thumbnailUrl = result.thumbnailPath;
     if (cropCoordinates) page.cropCoordinates = cropCoordinates;
     if (enhancement) page.enhancement = enhancement;
     if (scanMode) {
-      // Re-run OCR if ocr was enabled and scanMode changed to optimize text quality
       try {
         const ocr = await extractText(result.processedPath);
         page.ocrText = ocr.text;
@@ -609,9 +598,12 @@ exports.mergeScans = async (req, res) => {
     const quality = user.preferences?.exportQuality || 'standard';
     const pdfPath = await generatePdf(mergedPages, { title: mergedTitle, quality });
 
-    const totalSize = mergedPages.reduce((acc, p) => {
-      try { return acc + (fs.existsSync(p.originalImage) ? fs.statSync(p.originalImage).size : 0); } catch { return acc; }
-    }, 0);
+    let totalSize = 0;
+    for (const p of mergedPages) {
+      try {
+        await fs.promises.stat(p.originalImage).then(s => { totalSize += s.size; }).catch(() => {});
+      } catch {}
+    }
 
     // Create new merged scan record
     const mergedScan = new Scan({
@@ -670,9 +662,10 @@ exports.splitScan = async (req, res) => {
       // Generate single-page PDF
       const pdfPath = await generatePdf([singlePage], { title: pageTitle, quality });
 
-      const pageSize = (() => {
-        try { return fs.existsSync(singlePage.originalImage) ? fs.statSync(singlePage.originalImage).size : 0; } catch { return 0; }
-      })();
+      let pageSize = 0;
+      try {
+        await fs.promises.stat(singlePage.originalImage).then(s => { pageSize = s.size; }).catch(() => {});
+      } catch {};
 
       const splitScan = new Scan({
         user: req.user.id,
@@ -727,9 +720,7 @@ exports.annotatePage = async (req, res) => {
 
     await scan.save();
 
-    // Clean up the temporary annotation file if possible
-    const fs = require('fs');
-    try { fs.unlinkSync(req.file.path); } catch (e) {}
+    await fs.promises.unlink(req.file.path).catch(() => {});
 
     res.json({ msg: 'Annotation applied successfully', page });
   } catch (err) {

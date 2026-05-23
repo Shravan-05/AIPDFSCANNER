@@ -13,51 +13,49 @@ const SUPPORTED_LANGUAGES = {
   kor: 'Korean'
 };
 
-/**
- * Extract text from an image using Tesseract OCR
- * @param {string} imagePath - Path to the image file
- * @param {string} lang - Tesseract language code (default: 'eng')
- */
-exports.extractText = async (imagePath, lang = 'eng') => {
-  try {
-    // Validate language code; fallback to english if unknown
-    const langCode = SUPPORTED_LANGUAGES[lang] ? lang : 'eng';
+const MAX_CONCURRENT_OCR = 2;
+let activeOcrCount = 0;
+const ocrQueue = [];
 
-    const { data } = await Tesseract.recognize(imagePath, langCode, {
-      logger: (info) => {
-        if (info.status === 'recognizing text') {
-          const pct = Math.round(info.progress * 100);
-          if (pct % 25 === 0) {
-            console.log(`OCR [${langCode}] progress: ${pct}%`);
-          }
+function dequeueOcr() {
+  if (ocrQueue.length === 0 || activeOcrCount >= MAX_CONCURRENT_OCR) return;
+  const { imagePath, langCode, resolve, reject } = ocrQueue.shift();
+  activeOcrCount++;
+  runOcr(imagePath, langCode).then(resolve, reject).finally(() => {
+    activeOcrCount--;
+    dequeueOcr();
+  });
+}
+
+function runOcr(imagePath, langCode) {
+  return Tesseract.recognize(imagePath, langCode, {
+    logger: (info) => {
+      if (info.status === 'recognizing text') {
+        const pct = Math.round(info.progress * 100);
+        if (pct % 25 === 0) {
+          console.log(`OCR [${langCode}] progress: ${pct}%`);
         }
       }
-    });
+    }
+  }).then(({ data }) => ({
+    text: data.text || '',
+    confidence: data.confidence || 0,
+    words: data.words || [],
+    language: langCode
+  }));
+}
 
-    return {
-      text: data.text || '',
-      confidence: data.confidence || 0,
-      words: data.words || [],
-      language: langCode
-    };
-  } catch (err) {
-    console.error('OCR extraction error:', err);
-    return { text: '', confidence: 0, words: [], language: lang };
-  }
+exports.extractText = async (imagePath, lang = 'eng') => {
+  const langCode = SUPPORTED_LANGUAGES[lang] ? lang : 'eng';
+  return new Promise((resolve, reject) => {
+    ocrQueue.push({ imagePath, langCode, resolve, reject });
+    dequeueOcr();
+  });
 };
 
-/**
- * Batch extract text from multiple image paths
- * @param {string[]} imagePaths - Array of image paths
- * @param {string} lang - Tesseract language code
- */
 exports.batchExtract = async (imagePaths, lang = 'eng') => {
-  const results = [];
-  for (const imagePath of imagePaths) {
-    const result = await exports.extractText(imagePath, lang);
-    results.push(result);
-  }
-  return results;
+  const promises = imagePaths.map(path => exports.extractText(path, lang));
+  return Promise.all(promises);
 };
 
 exports.SUPPORTED_LANGUAGES = SUPPORTED_LANGUAGES;

@@ -7,21 +7,27 @@ exports.getFiles = async (req, res) => {
   try {
     const { page = 1, limit = 20, search, sort = '-createdAt' } = req.query;
 
-    // Scans query
     const queryScan = { user: req.user.id, status: 'completed' };
-    if (search) {
-      queryScan.title = { $regex: search, $options: 'i' };
-    }
-
-    // PdfDocuments query
     const queryPdf = { user: req.user.id };
     if (search) {
+      queryScan.title = { $regex: search, $options: 'i' };
       queryPdf.originalFilename = { $regex: search, $options: 'i' };
     }
 
-    const [scans, pdfs] = await Promise.all([
-      Scan.find(queryScan).select('title totalPages fileSize createdAt updatedAt isFavorite pdfUrl'),
-      PdfDocument.find(queryPdf).select('originalFilename numPages size filepath createdAt updatedAt')
+    const itemsLimit = parseInt(limit);
+    const itemsPage = parseInt(page);
+
+    const [scans, pdfs, totalScans, totalPdfs] = await Promise.all([
+      Scan.find(queryScan)
+        .select('title totalPages fileSize createdAt updatedAt isFavorite pdfUrl')
+        .sort(sort)
+        .lean(),
+      PdfDocument.find(queryPdf)
+        .select('originalFilename numPages size filepath createdAt updatedAt')
+        .sort(sort)
+        .lean(),
+      Scan.countDocuments(queryScan),
+      PdfDocument.countDocuments(queryPdf)
     ]);
 
     const scanFiles = scans.map(s => ({
@@ -43,32 +49,13 @@ exports.getFiles = async (req, res) => {
       size: p.size || 0,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
-      isFavorite: false, // Default for imported PDFs
+      isFavorite: false,
       pdfUrl: p.filepath,
       type: 'pdf'
     }));
 
     const combinedFiles = [...scanFiles, ...pdfFiles];
-
-    // In-memory sorting
-    if (sort === 'createdAt') {
-      combinedFiles.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    } else if (sort === '-createdAt') {
-      combinedFiles.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    } else if (sort === 'title') {
-      combinedFiles.sort((a, b) => a.name.localeCompare(b.name));
-    } else if (sort === '-title') {
-      combinedFiles.sort((a, b) => b.name.localeCompare(a.name));
-    } else if (sort === 'fileSize') {
-      combinedFiles.sort((a, b) => a.size - b.size);
-    } else if (sort === '-fileSize') {
-      combinedFiles.sort((a, b) => b.size - a.size);
-    }
-
-    // Pagination
-    const total = combinedFiles.length;
-    const itemsLimit = parseInt(limit);
-    const itemsPage = parseInt(page);
+    const total = totalScans + totalPdfs;
     const paginatedFiles = combinedFiles.slice((itemsPage - 1) * itemsLimit, itemsPage * itemsLimit);
 
     res.json({
@@ -94,16 +81,20 @@ exports.downloadFile = async (req, res) => {
 
       const uploadDir = process.env.UPLOAD_DIR || './uploads';
       const fullPath = path.join(uploadDir, pdfDoc.currentFilename);
-      if (fs.existsSync(fullPath)) {
+      try {
+        await fs.promises.access(fullPath);
         return res.download(fullPath, pdfDoc.originalFilename);
+      } catch {
+        return res.status(404).json({ msg: 'PDF file not found on disk.' });
       }
-      return res.status(404).json({ msg: 'PDF file not found on disk.' });
     }
 
-    if (scan.pdfUrl && fs.existsSync(scan.pdfUrl)) {
+    try {
+      await fs.promises.access(scan.pdfUrl);
       return res.download(scan.pdfUrl, `${scan.title}.pdf`);
+    } catch {
+      res.status(404).json({ msg: 'PDF not generated yet. Please export first.' });
     }
-    res.status(404).json({ msg: 'PDF not generated yet. Please export first.' });
   } catch (err) {
     console.error('Download file error:', err);
     res.status(500).json({ msg: 'Server error' });
@@ -121,9 +112,7 @@ exports.deleteFile = async (req, res) => {
 
       const uploadDir = process.env.UPLOAD_DIR || './uploads';
       const fullPath = path.join(uploadDir, pdfDoc.currentFilename);
-      if (fs.existsSync(fullPath)) {
-        try { fs.unlinkSync(fullPath); } catch (e) { /* ignore */ }
-      }
+      await fs.promises.unlink(fullPath).catch(() => {});
       await PdfDocument.deleteOne({ _id: req.params.id });
       return res.json({ msg: 'File deleted' });
     }
@@ -135,11 +124,9 @@ exports.deleteFile = async (req, res) => {
       if (p.thumbnailUrl) filesToDelete.push(p.thumbnailUrl);
     });
     if (scan.pdfUrl) filesToDelete.push(scan.pdfUrl);
-    filesToDelete.forEach(f => {
-      if (f && fs.existsSync(f)) {
-        try { fs.unlinkSync(f); } catch (e) { /* ignore */ }
-      }
-    });
+    await Promise.all(
+      filesToDelete.map(f => f && fs.promises.unlink(f).catch(() => {}))
+    );
     await Scan.deleteOne({ _id: req.params.id });
     res.json({ msg: 'File deleted' });
   } catch (err) {

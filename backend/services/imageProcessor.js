@@ -5,65 +5,23 @@ exports.detectDocumentEdges = async (imagePath) => {
   try {
     const metadata = await sharp(imagePath).metadata();
     const { width, height } = metadata;
-    const buffer = await sharp(imagePath)
+    const trimmed = await sharp(imagePath)
       .grayscale()
       .normalize()
-      .sharpen()
-      .toBuffer();
-    const { data, info } = await sharp(buffer)
-      .raw()
+      .trim(20)
       .toBuffer({ resolveWithObject: true });
-    const threshold = 128;
-    const binary = new Uint8Array(info.width * info.height);
-    for (let i = 0; i < data.length; i++) {
-      binary[i] = data[i] > threshold ? 255 : 0;
-    }
-    const edgeMap = new Uint8Array(info.width * info.height);
-    for (let y = 1; y < info.height - 1; y++) {
-      for (let x = 1; x < info.width - 1; x++) {
-        const idx = y * info.width + x;
-        const sum =
-          -binary[(y - 1) * info.width + (x - 1)] - binary[(y - 1) * info.width + x] - binary[(y - 1) * info.width + (x + 1)] -
-          binary[y * info.width + (x - 1)] + 8 * binary[idx] - binary[y * info.width + (x + 1)] -
-          binary[(y + 1) * info.width + (x - 1)] - binary[(y + 1) * info.width + x] - binary[(y + 1) * info.width + (x + 1)];
-        edgeMap[idx] = sum > 128 ? 255 : 0;
-      }
-    }
-    let top = 0, bottom = info.height - 1, left = 0, right = info.width - 1;
-    for (let y = 0; y < info.height; y++) {
-      let hasEdge = false;
-      for (let x = 0; x < info.width; x++) {
-        if (edgeMap[y * info.width + x] > 0) { hasEdge = true; break; }
-      }
-      if (hasEdge) { top = Math.max(0, y - 5); break; }
-    }
-    for (let y = info.height - 1; y >= 0; y--) {
-      let hasEdge = false;
-      for (let x = 0; x < info.width; x++) {
-        if (edgeMap[y * info.width + x] > 0) { hasEdge = true; break; }
-      }
-      if (hasEdge) { bottom = Math.min(info.height - 1, y + 5); break; }
-    }
-    for (let x = 0; x < info.width; x++) {
-      let hasEdge = false;
-      for (let y = 0; y < info.height; y++) {
-        if (edgeMap[y * info.width + x] > 0) { hasEdge = true; break; }
-      }
-      if (hasEdge) { left = Math.max(0, x - 5); break; }
-    }
-    for (let x = info.width - 1; x >= 0; x--) {
-      let hasEdge = false;
-      for (let y = 0; y < info.height; y++) {
-        if (edgeMap[y * info.width + x] > 0) { hasEdge = true; break; }
-      }
-      if (hasEdge) { right = Math.min(info.width - 1, x + 5); break; }
-    }
+    const { info } = trimmed;
+    const trimmedW = info.width;
+    const trimmedH = info.height;
+    if (trimmedW >= width && trimmedH >= height) return null;
+    const left = Math.round((width - trimmedW) / 2);
+    const top = Math.round((height - trimmedH) / 2);
     const padding = 10;
     return {
       x1: Math.max(0, left - padding),
       y1: Math.max(0, top - padding),
-      x2: Math.min(width, right + padding),
-      y2: Math.min(height, bottom + padding)
+      x2: Math.min(width, left + trimmedW + padding),
+      y2: Math.min(height, top + trimmedH + padding)
     };
   } catch (err) {
     console.error('Edge detection error:', err);
@@ -160,25 +118,52 @@ exports.detectOrientation = async (imagePath) => {
 
 exports.processImage = async (imagePath, options = {}) => {
   try {
-    // Fail fast if it's not a valid image (e.g. if a PDF slips through)
-    // This prevents Tesseract from crashing the entire Node process later.
     await sharp(imagePath).metadata();
 
     const { autoCropEnabled = true, enhanceEnabled = true, scanMode = 'color' } = options;
-    let currentPath = imagePath;
+    const ext = path.extname(imagePath);
+    const base = imagePath.replace(ext, '');
+    const processedPath = `${base}_processed${ext}`;
+    const thumbnailPath = `${base}_thumb.jpg`;
+
+    let pipeline = sharp(imagePath).rotate();
+
     if (autoCropEnabled) {
-      const edges = await exports.detectDocumentEdges(currentPath);
+      const edges = await exports.detectDocumentEdges(imagePath);
       if (edges) {
-        currentPath = await exports.autoCrop(currentPath, edges);
+        pipeline = sharp(imagePath).rotate().extract({
+          left: Math.round(edges.x1),
+          top: Math.round(edges.y1),
+          width: Math.round(edges.x2 - edges.x1),
+          height: Math.round(edges.y2 - edges.y1)
+        });
       }
     }
-    currentPath = await exports.perspectiveCorrect(currentPath);
+
     if (enhanceEnabled) {
-      currentPath = await exports.enhance(currentPath, options);
+      const { brightness = 1.0, contrast = 1.0, sharpness = 1.0 } = options;
+      if (contrast !== 1.0 || brightness !== 1.0) {
+        pipeline = pipeline.linear(contrast, (1 - contrast) * 128 + (brightness - 1) * 128);
+      }
+      if (sharpness > 1.0) {
+        pipeline = pipeline.sharpen(sharpness);
+      }
     }
-    currentPath = await exports.convertMode(currentPath, scanMode);
-    const thumbnailPath = await exports.generateThumbnail(currentPath);
-    return { processedPath: currentPath, thumbnailPath };
+
+    if (scanMode === 'grayscale') {
+      pipeline = pipeline.grayscale();
+    } else if (scanMode === 'blackwhite') {
+      pipeline = pipeline.grayscale().threshold(128);
+    }
+
+    await pipeline.jpeg({ quality: 85 }).toFile(processedPath);
+
+    await sharp(processedPath)
+      .resize(300, 200, { fit: 'cover', position: 'centre' })
+      .jpeg({ quality: 70 })
+      .toFile(thumbnailPath);
+
+    return { processedPath, thumbnailPath };
   } catch (err) {
     console.error('Process image error:', err);
     throw err;

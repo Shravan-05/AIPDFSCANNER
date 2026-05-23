@@ -41,6 +41,9 @@ const pdfDocumentSchema = new mongoose.Schema({
   }
 });
 
+pdfDocumentSchema.index({ user: 1, createdAt: -1 });
+pdfDocumentSchema.index({ user: 1, originalFilename: 1 });
+
 pdfDocumentSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();

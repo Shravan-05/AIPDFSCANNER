@@ -16,7 +16,6 @@ import {
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { UploadCloud, File, Trash2, GripVertical, FileDown, Loader } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist/build/pdf';
 import pdfToolsAPI from '../services/pdfToolsAPI';
 import { showToast } from '../components/UI/Toast';
 
@@ -83,6 +82,7 @@ const MergePDF = () => {
 
   const generateThumbnail = async (file) => {
     try {
+      const pdfjsLib = await import('pdfjs-dist/build/pdf');
       const arrayBuffer = await file.arrayBuffer();
       const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       const pdf = await loadingTask.promise;
@@ -94,8 +94,9 @@ const MergePDF = () => {
       canvas.height = viewport.height;
       canvas.width = viewport.width;
       await page.render({ canvasContext: context, viewport }).promise;
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-      return { thumbnail: dataUrl, numPages: pdf.numPages };
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+      const thumbUrl = URL.createObjectURL(blob);
+      return { thumbnail: thumbUrl, numPages: pdf.numPages };
     } catch (e) {
       console.error("Thumb error", e);
       return { thumbnail: null, numPages: null };
@@ -109,7 +110,6 @@ const MergePDF = () => {
       return;
     }
 
-    // Add files immediately so UI feels responsive
     const incoming = validFiles.map(file => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
@@ -119,11 +119,11 @@ const MergePDF = () => {
     
     setFiles(prev => [...prev, ...incoming]);
 
-    // Generate thumbnails asynchronously
-    for (const item of incoming) {
+    const thumbPromises = incoming.map(async (item) => {
       const meta = await generateThumbnail(item.file);
       setFiles(prev => prev.map(f => f.id === item.id ? { ...f, thumbnail: meta.thumbnail, pages: meta.numPages } : f));
-    }
+    });
+    await Promise.all(thumbPromises);
   };
 
   const handleDragEnd = (event) => {
@@ -158,7 +158,6 @@ const MergePDF = () => {
         setProgress(Math.round((e.loaded / e.total) * 100));
       });
       
-      // Download the blob
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -166,6 +165,7 @@ const MergePDF = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
       
       showToast.success("PDFs merged successfully!");
       setFiles([]);

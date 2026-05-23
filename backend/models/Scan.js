@@ -104,7 +104,9 @@ const scanSchema = new mongoose.Schema({
 });
 
 scanSchema.index({ user: 1, createdAt: -1 });
-scanSchema.index({ isFavorite: 1 });
+scanSchema.index({ user: 1, status: 1, createdAt: -1 });
+scanSchema.index({ user: 1, isFavorite: 1 });
+scanSchema.index({ user: 1, folder: 1 });
 scanSchema.index({ tags: 1 });
 scanSchema.index({ status: 1 });
 scanSchema.index({ ocrText: 'text' });

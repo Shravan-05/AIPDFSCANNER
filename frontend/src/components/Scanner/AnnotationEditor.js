@@ -80,19 +80,25 @@ const AnnotationEditor = ({ imageUrl, onSave, onCancel }) => {
   const handleSave = async () => {
     if (!stageRef.current) return;
     try {
-      // We only want to export the annotations, not the base image.
-      // So we temporarily hide the background image.
       const imageNode = stageRef.current.findOne('#baseImage');
       if (imageNode) imageNode.hide();
 
-      // Export at original resolution
       const dataUrl = stageRef.current.toDataURL({ pixelRatio: 1 / scale });
       
       if (imageNode) imageNode.show();
 
-      // Convert data URL to Blob
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
+      const blob = await new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => {
+          const c = document.createElement('canvas');
+          c.width = img.width;
+          c.height = img.height;
+          const ctx = c.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          c.toBlob(resolve, 'image/png');
+        };
+        img.src = dataUrl;
+      });
       const file = new File([blob], 'annotation.png', { type: 'image/png' });
 
       onSave(file);

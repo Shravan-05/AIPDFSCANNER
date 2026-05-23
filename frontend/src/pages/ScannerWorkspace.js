@@ -26,8 +26,20 @@ const ScannerWorkspace = () => {
   };
 
   const removeFile = (index) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles(prev => {
+      const removed = prev[index];
+      if (removed?.preview) URL.revokeObjectURL(removed.preview);
+      return prev.filter((_, i) => i !== index);
+    });
   };
+
+  const objectUrlsRef = React.useRef([]);
+  React.useEffect(() => {
+    const current = files.map(f => f.preview).filter(Boolean);
+    const toRevoke = objectUrlsRef.current.filter(url => !current.includes(url));
+    toRevoke.forEach(url => URL.revokeObjectURL(url));
+    objectUrlsRef.current = current;
+  }, [files]);
 
   const handleProcess = async () => {
     if (!files.length) {

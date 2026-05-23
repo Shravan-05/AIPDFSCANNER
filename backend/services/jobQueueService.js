@@ -132,22 +132,13 @@ class JobQueueService {
 
       job.status = 'processing';
       job.progress = 10;
-      job.currentStep = 'Normalizing input and extracting parameters...';
-      job.timeline[1].timestamp = new Date();
-      job.timeline[1].status = 'processing';
-      await job.save();
-      this._mirrorJob(job);
-
-      await new Promise(r => setTimeout(r, 600));
-
-      job.progress = 25;
       job.currentStep = 'Loading PDF document...';
+      job.timeline[1].timestamp = new Date();
       job.timeline[1].status = 'completed';
       job.timeline[2].timestamp = new Date();
       job.timeline[2].status = 'processing';
       await job.save();
       this._mirrorJob(job);
-      await new Promise(r => setTimeout(r, 400));
 
       let pdfBuffer;
       if (job.filePath) {
@@ -162,7 +153,6 @@ class JobQueueService {
       job.timeline[2].status = 'completed';
       job.timeline[3].timestamp = new Date();
       job.timeline[3].status = 'processing';
-      await job.save();
       this._mirrorJob(job);
 
       const modifiedPdfBytes = await pdfEngine.execute(pdfBuffer, job.actions);
@@ -172,9 +162,7 @@ class JobQueueService {
       job.timeline[3].status = 'completed';
       job.timeline[4].timestamp = new Date();
       job.timeline[4].status = 'processing';
-      await job.save();
       this._mirrorJob(job);
-      await new Promise(r => setTimeout(r, 400));
 
       const uploadDir = process.env.UPLOAD_DIR || './uploads';
       const outputFilename = `ai_edited_${generateFileName('output.pdf')}`;
@@ -182,31 +170,13 @@ class JobQueueService {
 
       await fs.writeFile(outputPath, modifiedPdfBytes);
 
-      const { PDFDocument: PdfLibDocument } = require('pdf-lib');
-      let finalPageCount = 1;
-      try {
-        const finalDoc = await PdfLibDocument.load(modifiedPdfBytes);
-        finalPageCount = finalDoc.getPageCount();
-      } catch (e) {
-        console.error('Failed to load final page count:', e);
-      }
-
-      job.progress = 90;
-      job.currentStep = 'Updating document registry...';
-      job.timeline[4].status = 'completed';
-      job.timeline[5].timestamp = new Date();
-      job.timeline[5].status = 'processing';
-      await job.save();
-      this._mirrorJob(job);
-      await new Promise(r => setTimeout(r, 400));
-
       const newPdfDoc = new PdfDocument({
         user: job.userId || '000000000000000000000000',
         originalFilename: job.originalFilename,
         currentFilename: outputFilename,
         filepath: `/uploads/${outputFilename}`,
         size: modifiedPdfBytes.length,
-        numPages: finalPageCount,
+        numPages: job.actions?.length || 1,
         history: [{ action: 'AI_EDIT', description: `Command: ${job.command}` }]
       });
       await newPdfDoc.save();
@@ -218,6 +188,8 @@ class JobQueueService {
       job.progress = 100;
       job.status = 'completed';
       job.currentStep = 'Process completed successfully!';
+      job.timeline[4].status = 'completed';
+      job.timeline[5].timestamp = new Date();
       job.timeline[5].status = 'completed';
       job.result = {
         document: newPdfDoc.toObject(),
