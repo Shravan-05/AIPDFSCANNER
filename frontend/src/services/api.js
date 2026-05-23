@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  baseURL: process.env.REACT_APP_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -98,7 +98,7 @@ export const getFileUrl = (filePath) => {
   const normalizedPath = filePath.replace(/\\/g, '/');
   const host = process.env.REACT_APP_API_URL
     ? process.env.REACT_APP_API_URL.replace('/api', '')
-    : 'http://localhost:5000';
+    : '';
   return `${host}/${normalizedPath}`;
 };
 
