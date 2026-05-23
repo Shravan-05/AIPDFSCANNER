@@ -224,4 +224,5 @@ const FileCard = ({
   );
 };
 
-export default FileCard;
+export default React.memo(FileCard);
+

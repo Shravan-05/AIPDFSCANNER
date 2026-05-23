@@ -13,7 +13,7 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const extAllowed = (process.env.ALLOWED_FILE_TYPES || 'jpeg,jpg,png,tiff,bmp,webp')
+  const extAllowed = (process.env.ALLOWED_FILE_TYPES || 'jpeg,jpg,png,tiff,bmp,webp,gif,svg,heic,heif,avif')
     .split(',');
 
   const ext = path.extname(file.originalname).toLowerCase().replace('.', '');

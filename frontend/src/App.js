@@ -69,6 +69,17 @@ const AppLayout = ({ children }) => {
   );
 };
 
+const toastOptions = {
+  duration: 3000,
+  style: {
+    background: 'var(--bg-glass)',
+    color: 'var(--text-primary)',
+    backdropFilter: 'blur(12px)',
+    border: '1px solid var(--border-color)',
+    borderRadius: 'var(--radius-md)'
+  }
+};
+
 function App() {
   return (
     <ThemeProvider>
@@ -76,16 +87,7 @@ function App() {
         <Router>
           <Toaster
             position="top-right"
-            toastOptions={{
-              duration: 3000,
-              style: {
-                background: 'var(--bg-glass)',
-                color: 'var(--text-primary)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid var(--border-color)',
-                borderRadius: 'var(--radius-md)'
-              }
-            }}
+            toastOptions={toastOptions}
           />
           <AppLayout>
             <Routes>

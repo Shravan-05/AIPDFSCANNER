@@ -69,7 +69,7 @@ export const scansAPI = {
   updatePage: (id, pageId, data) => api.put(`/scans/${id}/pages/${pageId}`, data),
   autoArrange: (id) => api.post(`/scans/${id}/auto-arrange`),
   getStats: () => api.get('/scans/stats'),
-  merge: (scanIds, title) => api.post('/scans/merge', { scanIds, title }),
+  merge: (scanIds, title) => api.post('/scans/merge', { scanIds, title }, { timeout: 120000 }),
   split: (id) => api.post(`/scans/${id}/split`),
   annotate: (id, pageId, formData) => api.post(`/scans/${id}/pages/${pageId}/annotate`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }

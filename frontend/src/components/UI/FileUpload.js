@@ -2,7 +2,7 @@ import React from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, Image as ImageIcon } from 'lucide-react';
 
-const FileUpload = ({ onDrop, accept = { 'image/*': ['.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.webp'] }, maxFiles = 50, disabled = false }) => {
+const FileUpload = ({ onDrop, accept = { 'image/*': ['.png', '.jpg', '.jpeg', '.tiff', '.tif', '.bmp', '.webp', '.gif', '.svg', '.heic', '.heif', '.avif'] }, maxFiles = 50, disabled = false }) => {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept,
@@ -40,7 +40,7 @@ const FileUpload = ({ onDrop, accept = { 'image/*': ['.png', '.jpg', '.jpeg', '.
         {isDragActive ? 'Drop your images here' : 'Drag & drop images here'}
       </p>
       <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
-        PNG, JPG, TIFF, BMP, WebP &mdash; up to 10MB each
+        PNG, JPG, TIFF, BMP, WebP, GIF, SVG, HEIC &mdash; up to 10MB each
       </p>
     </div>
   );

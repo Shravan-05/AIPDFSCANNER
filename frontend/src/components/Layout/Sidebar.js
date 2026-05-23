@@ -78,7 +78,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
               background: isActive ? 'rgba(99,102,241,0.1)' : 'transparent',
               fontSize: 14, fontWeight: 500,
               justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
-              transition: 'all 150ms ease'
+              transition: 'color 150ms ease, background 150ms ease'
             })}
           >
             <link.icon size={20} />
@@ -108,8 +108,7 @@ const Sidebar = ({ mobileOpen, onClose }) => {
         {mobileOpen && (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 200,
-            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-            WebkitBackdropFilter: 'blur(4px)',
+            background: 'rgba(0,0,0,0.5)',
           }} onClick={onClose} />
         )}
         <aside style={{
@@ -134,11 +133,11 @@ const Sidebar = ({ mobileOpen, onClose }) => {
       width: collapsed ? 'var(--sidebar-collapsed)' : 'var(--sidebar-width)',
       height: '100vh',
       position: 'sticky', top: 0,
-      background: 'var(--bg-glass)',
-      backdropFilter: 'blur(16px)',
+      background: 'var(--bg-primary)',
       borderRight: '1px solid var(--border-color)',
       display: 'flex', flexDirection: 'column',
       transition: 'width 250ms ease',
+      willChange: 'width',
       overflow: 'hidden',
       zIndex: 50,
       flexShrink: 0
@@ -148,4 +147,4 @@ const Sidebar = ({ mobileOpen, onClose }) => {
   );
 };
 
-export default Sidebar;
+export default React.memo(Sidebar);

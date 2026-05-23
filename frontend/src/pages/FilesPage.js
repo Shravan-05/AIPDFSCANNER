@@ -129,7 +129,11 @@ const FilesPage = () => {
     const title = mergeTitle.trim() || `Merged Document ${new Date().toLocaleDateString()}`;
     setMerging(true);
     try {
-      const scanIds = Array.from(selected);
+      const scanIds = selectedFiles.filter(f => f.type === 'scan').map(f => f.id);
+      if (scanIds.length < 2) {
+        showToast.error('Select at least 2 scanned documents to merge');
+        return;
+      }
       await scansAPI.merge(scanIds, title);
       showToast.success('Documents merged successfully!');
       setShowMergeModal(false);
@@ -138,7 +142,8 @@ const FilesPage = () => {
       setIsSelecting(false);
       await loadFiles();
     } catch (err) {
-      showToast.error(err.response?.data?.msg || 'Merge failed');
+      const msg = err.response?.data?.msg || 'Merge failed. Check your connection and try again.';
+      showToast.error(msg);
     } finally {
       setMerging(false);
     }

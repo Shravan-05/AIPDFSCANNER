@@ -125,7 +125,7 @@ const FileListRow = ({
         display: 'flex', alignItems: 'center', justifyContent: 'center'
       }}>
         {thumbnailUrl ? (
-          <img src={thumbnailUrl} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.style.display='none'} />
+          <img src={thumbnailUrl} alt={file.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => e.target.style.display='none'} />
         ) : (
           <FileText size={20} color="var(--text-tertiary)" />
         )}
@@ -198,4 +198,5 @@ const FileListRow = ({
   );
 };
 
-export default FileGrid;
+export default React.memo(FileGrid);
+
