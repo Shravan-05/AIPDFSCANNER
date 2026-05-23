@@ -24,7 +24,10 @@ const LoginPage = () => {
       showToast.success('Welcome back!');
       navigate('/dashboard');
     } catch (err) {
-      showToast.error(err.response?.data?.msg || 'Login failed');
+      const msg = err.response?.data?.msg;
+      if (msg) showToast.error(msg);
+      else if (err.message === 'Network Error') showToast.error('Cannot reach server. Check REACT_APP_API_URL or backend status.');
+      else showToast.error('Login failed');
     } finally {
       setLoading(false);
     }
