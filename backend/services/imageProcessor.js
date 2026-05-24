@@ -123,7 +123,7 @@ exports.processImage = async (imagePath, options = {}) => {
     const { autoCropEnabled = true, enhanceEnabled = true, scanMode = 'color' } = options;
     const ext = path.extname(imagePath);
     const base = imagePath.replace(ext, '');
-    const processedPath = `${base}_processed${ext}`;
+    const processedPath = `${base}_processed.jpg`;
     const thumbnailPath = `${base}_thumb.jpg`;
 
     let pipeline = sharp(imagePath).rotate();
@@ -220,12 +220,12 @@ exports.processImageCustom = async (originalPath, options = {}) => {
     // Generate unique file path
     const ext = path.extname(originalPath);
     const base = originalPath.replace(ext, '');
-    const processedPath = `${base}_custom_${Date.now()}${ext}`;
+    const processedPath = `${base}_custom_${Date.now()}.jpg`;
     
     await pipeline.toFile(processedPath);
     
     // 4. Generate thumbnail
-    const thumbnailPath = processedPath.replace(ext, `_thumb${ext}`);
+    const thumbnailPath = processedPath.replace(/\.jpg$/i, `_thumb.jpg`);
     await sharp(processedPath)
       .resize(300, 200, { fit: 'cover', position: 'centre' })
       .jpeg({ quality: 70 })
@@ -242,7 +242,7 @@ exports.applyAnnotation = async (originalPath, annotationPath) => {
   try {
     const ext = path.extname(originalPath);
     const base = originalPath.replace(ext, '');
-    const compositedPath = `${base}_annotated_${Date.now()}${ext}`;
+    const compositedPath = `${base}_annotated_${Date.now()}.jpg`;
 
     // Ensure we account for EXIF rotation by forcing auto-rotation before getting metadata
     const baseImage = sharp(originalPath).rotate();
@@ -257,7 +257,7 @@ exports.applyAnnotation = async (originalPath, annotationPath) => {
       .composite([{ input: resizedAnnotation }])
       .toFile(compositedPath);
 
-    const thumbnailPath = compositedPath.replace(ext, `_thumb${ext}`);
+    const thumbnailPath = compositedPath.replace(/\.jpg$/i, `_thumb.jpg`);
     await sharp(compositedPath)
       .resize(300, 200, { fit: 'cover', position: 'centre' })
       .jpeg({ quality: 70 })

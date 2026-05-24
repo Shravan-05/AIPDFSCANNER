@@ -10,6 +10,7 @@ const executionSafety = require('../services/executionSafetyService');
 const pdfEngine = require('../services/pdfActionEngine');
 const jobQueue = require('../services/jobQueueService');
 const docClassifier = require('../services/docClassifierService');
+const ollamaService = require('../services/ollamaService');
 
 /**
  * Merges multiple native PDF files into a single PDF.
@@ -107,6 +108,16 @@ exports.aiEdit = async (req, res) => {
 
     const inputMode = input_mode || 'text';
     const cacheKey = nlpEnhancer.normalizeForCache(command);
+    const fileBuffer = await fs.readFile(req.file.path);
+    let pageCount = docInfo.pageCount || 0;
+    if (!pageCount) {
+      try {
+        const loadedPdf = await PdfLibDocument.load(fileBuffer);
+        pageCount = loadedPdf.getPageCount();
+      } catch (e) {
+        console.error('Unable to read PDF page count for validation:', e.message);
+      }
+    }
 
     // 0. Pre-process with NLP enhancer for quick optimization
     const preprocessed = await nlpEnhancer.preprocessCommand(command);
@@ -121,10 +132,31 @@ exports.aiEdit = async (req, res) => {
       console.log(`[Quick Match] ${command} → ${quickMatch.intent} (${quickMatch.confidence})`);
     }
 
-    // 1. Parse natural language into JSON actions with context awareness
-    let parseResult = cachedResult && cachedResult.confidence >= 0.85
-      ? cachedResult
-      : await aiParser.parse(command, inputMode, history);
+    // 1. Parse natural language into JSON actions with context awareness using Ollama
+    let parseResult;
+    
+    if (cachedResult && cachedResult.confidence >= 0.85) {
+      parseResult = cachedResult;
+    } else {
+      // Try Ollama first, fallback to aiParser if unavailable
+      try {
+        const ollamaResult = await ollamaService.parsePdfCommand(command, {
+          pageCount,
+          documentType: docInfo.documentType || 'document'
+        });
+        
+        // If Ollama provides good confidence, use it, otherwise fallback
+        if (ollamaResult.confidence >= 0.6) {
+          parseResult = ollamaResult;
+          console.log(`[Ollama] Parsed command with ${ollamaResult.confidence} confidence`);
+        } else {
+          parseResult = await aiParser.parse(command, inputMode, history);
+        }
+      } catch (error) {
+        console.warn('[Ollama Fallback] Using aiParser:', error.message);
+        parseResult = await aiParser.parse(command, inputMode, history);
+      }
+    }
     parseResult.original_input = command;
     parseResult.input_mode = inputMode;
 
@@ -137,16 +169,6 @@ exports.aiEdit = async (req, res) => {
     parseResult.confidence = Math.min(0.98, parseResult.confidence * confidenceMultiplier);
 
     // 3. Validate action sequence
-    const fileBuffer = await fs.readFile(req.file.path);
-    let pageCount = docInfo.pageCount || 0;
-    if (!pageCount) {
-      try {
-        const loadedPdf = await PdfLibDocument.load(fileBuffer);
-        pageCount = loadedPdf.getPageCount();
-      } catch (e) {
-        console.error('Unable to read PDF page count for validation:', e.message);
-      }
-    }
 
     const pdfMetadata = {
       fileSizeMB: req.file.size / (1024 * 1024),
@@ -167,7 +189,7 @@ exports.aiEdit = async (req, res) => {
       });
     }
 
-    const validation = executionSafety.validateActionSequence(parseResult.actions, pdfMetadata);
+    const validation = executionSafety.validateActionSequence(parseResult.actions || [], pdfMetadata);
     if (!validation.isValid) {
       fs.unlink(req.file.path).catch(e => console.error(e));
       return res.status(400).json({
@@ -440,3 +462,20 @@ exports.validateAction = async (req, res) => {
     res.status(500).json({ msg: 'An error occurred while validating the action.' });
   }
 };
+
+/**
+ * Test Ollama connection
+ */
+exports.testOllamaConnection = async (req, res) => {
+  try {
+    const result = await ollamaService.testConnection();
+    res.status(result.success ? 200 : 503).json(result);
+  } catch (error) {
+    console.error('Ollama Connection Test Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      note: 'Make sure Ollama is running. Install from https://ollama.ai and run: ollama serve'
+    });
+  }
+};;

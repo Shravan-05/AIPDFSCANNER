@@ -391,6 +391,68 @@ a:hover {
   }
 }
 
+.ai-editor-shell,
+.ai-editor-toolbar,
+.ai-editor-toolbar-actions,
+.ai-editor-command-form,
+.ai-editor-chat-panel {
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .ai-editor-toolbar {
+    flex-wrap: wrap;
+    align-items: stretch !important;
+  }
+
+  .ai-editor-toolbar-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .ai-editor-toolbar-actions > * {
+    max-width: 100%;
+  }
+
+  .ai-editor-command-form {
+    align-items: stretch !important;
+  }
+
+  .ai-editor-command-form .input {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 240px) {
+  .ai-editor-shell {
+    gap: 4px !important;
+    padding-bottom: 48px !important;
+  }
+
+  .ai-editor-toolbar,
+  .ai-editor-toolbar-actions,
+  .ai-editor-command-form {
+    gap: 4px !important;
+  }
+
+  .ai-editor-toolbar-actions .btn,
+  .ai-editor-toolbar-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ai-editor-command-form button {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .ai-editor-chat-panel {
+    min-height: 220px !important;
+    max-height: 56vh !important;
+  }
+}
+
 @media (max-width: 360px) {
   :root {
     --page-padding: 8px;
@@ -608,4 +670,24 @@ a:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 24px rgba(99, 102, 241, 0.15);
   }
+}
+
+/* ---------------------------------------------------------------------------
+   ULTRA-SMALL SCREEN OPTIMIZATIONS (200px and below)
+   --------------------------------------------------------------------------- */
+@media (max-width: 200px) {
+  :root {
+    --page-padding: 2px;
+    --grid-col-min: 60px;
+    --navbar-height: 44px;
+    --sidebar-width: 50px;
+    --sidebar-collapsed: 50px;
+  }
+  .page-container { padding: 2px !important; margin: 0 !important; }
+  .glass-card, .glass { padding: 4px !important; margin: 0 !important; border-radius: 4px !important; }
+  .btn { padding: 3px 4px !important; font-size: 0.55rem !important; min-height: 24px; gap: 3px; line-height: 1; }
+  .input { padding: 3px 6px !important; font-size: 0.55rem !important; height: 24px !important; }
+  h1 { font-size: 11px !important; margin: 2px 0 !important; }
+  h2 { font-size: 10px !important; margin: 1px 0 !important; }
+  svg { width: 14px !important; height: 14px !important; }
 }

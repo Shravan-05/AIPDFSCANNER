@@ -10,10 +10,14 @@ const {
   getSmartSuggestions,
   getCommandHelp,
   getOnboardingSuggestions,
-  validateAction
+  validateAction,
+  testOllamaConnection
 } = require('../controllers/pdfToolController');
 
 router.use(protect);
+
+// Ollama connection test (for debugging/setup)
+router.get('/ollama/test', testOllamaConnection);
 
 // Using the same upload middleware, allowing up to 100 PDFs
 router.post('/merge', upload.array('files', 100), mergePdfs);

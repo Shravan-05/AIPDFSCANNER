@@ -193,6 +193,8 @@ const AiEditor = () => {
   const fileInputRef    = useRef(null);
   const messagesEndRef  = useRef(null);
   const recognitionRef  = useRef(null);
+  const recognitionStateRef = useRef('idle');
+  const manualStopRef = useRef(false);
   const inputRef        = useRef(null);
   const pollingRef      = useRef(null);
 
@@ -212,20 +214,28 @@ const AiEditor = () => {
     if (!SR) return;
 
     const rec = new SR();
-    rec.continuous    = false;
+    rec.continuous    = true;
     rec.interimResults = true;
     rec.lang          = 'en-US';
 
-    rec.onstart = () => { setIsListening(true); setInputMode('voice'); };
-    rec.onend   = () => { setIsListening(false); };
+    rec.onstart = () => {
+      recognitionStateRef.current = 'listening';
+      manualStopRef.current = false;
+      setIsListening(true);
+      setInputMode('voice');
+    };
+    rec.onend = () => {
+      recognitionStateRef.current = 'idle';
+      setIsListening(false);
+    };
 
     rec.onresult = (event) => {
       const transcript = Array.from(event.results)
-        .map(r => r[0].transcript).join('');
+        .map(r => r[0].transcript).join(' ').replace(/\s+/g, ' ').trim();
       setInputCommand(transcript);
 
       if (event.results[event.results.length - 1].isFinal) {
-        const final = event.results[event.results.length - 1][0].transcript.trim();
+        const final = transcript;
         setInputCommand(final);
 
         // Auto-submit triggers
@@ -236,7 +246,7 @@ const AiEditor = () => {
         if (hit) {
           const cmd = final.slice(0, final.length - hit.length).trim();
           if (cmd) { setInputCommand(cmd); setTimeout(() => doSubmit(cmd, 'voice'), 300); }
-        } else if (autoSubmit) {
+        } else if (autoSubmit && !manualStopRef.current) {
           setTimeout(() => doSubmit(final, 'voice'), 500);
         }
       }
@@ -247,6 +257,7 @@ const AiEditor = () => {
         showToast.error('Microphone access denied. Enable mic in browser settings.');
       else if (e.error === 'no-speech')
         showToast.error('No speech detected.');
+      recognitionStateRef.current = 'idle';
       setIsListening(false);
     };
 
@@ -450,11 +461,24 @@ const AiEditor = () => {
       return;
     }
     if (isListening) {
-      recognitionRef.current.stop();
+      manualStopRef.current = true;
+      setIsListening(false);
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        recognitionStateRef.current = 'idle';
+      }
     } else {
       setInputCommand('');
-      try { recognitionRef.current.start(); }
-      catch (e) { console.error('Mic start error', e); }
+      if (recognitionStateRef.current !== 'idle') return;
+      try {
+        recognitionStateRef.current = 'starting';
+        recognitionRef.current.start();
+      } catch (e) {
+        recognitionStateRef.current = 'idle';
+        setIsListening(false);
+        console.error('Mic start error', e);
+      }
     }
   };
 
@@ -680,6 +704,7 @@ const AiEditor = () => {
 
   return (
     <div
+      className="ai-editor-shell"
       onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }}
       onDragLeave={() => setIsDragActive(false)}
       onDrop={handleDrop}
@@ -706,6 +731,7 @@ const AiEditor = () => {
 
       {/* ── LEFT: Workspace Panel ────────────────────────────────────────────── */}
       <div style={{
+        minWidth: 0,
         flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden',
         borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)',
         background: 'var(--bg-secondary)', boxShadow: 'var(--shadow-md)'
@@ -715,11 +741,11 @@ const AiEditor = () => {
           padding: '10px 14px', display: 'flex', flexDirection: 'column',
           borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', gap: 10
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="ai-editor-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
             <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
               <FileText size={17} color="var(--accent-primary)" /> AI Workspace Viewport
             </h2>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="ai-editor-toolbar-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               
               {/* Undo / Redo controls */}
               {activeFile && (
@@ -963,7 +989,8 @@ const AiEditor = () => {
 
       {/* ── RIGHT/ Bottom: Collapsible AI Chat Sidebar ──────────────────────── */}
       {!sidebarCollapsed && (
-        <div style={{
+        <div className="ai-editor-chat-panel" style={{
+          minWidth: 0,
           flex: isMobile ? '0 0 auto' : '0 0 min(390px, 100%)',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
           borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)',
@@ -1111,7 +1138,7 @@ const AiEditor = () => {
             padding: '12px 14px', background: 'rgba(20,20,30,0.9)',
             borderTop: '1px solid rgba(255,255,255,0.06)'
           }}>
-            <form onSubmit={handleFormSubmit} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <form className="ai-editor-command-form" onSubmit={handleFormSubmit} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               
               {/* Mic toggle */}
               <button

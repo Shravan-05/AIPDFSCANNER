@@ -21,6 +21,7 @@ const ScannerWorkspace = () => {
     setFiles(prev => [...prev, ...acceptedFiles.map(f => ({
       file: f,
       preview: URL.createObjectURL(f),
+      previewable: f.type.startsWith('image/') && !/\.(psd|psb|exr|hdr|tga|icb|vda|vst|pbm|pgm|ppm|pnm|pfm|ras|xpm|xbm)$/i.test(f.name),
       name: f.name
     }))]);
   };
@@ -89,7 +90,17 @@ const ScannerWorkspace = () => {
                   overflow: 'hidden',
                   background: 'var(--bg-tertiary)'
                 }}>
-                  <img src={f.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {f.previewable ? (
+                    <img src={f.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{
+                      width: '100%', height: '100%', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', color: 'var(--text-secondary)', padding: 10,
+                      textAlign: 'center', fontSize: 11, fontWeight: 700, wordBreak: 'break-word'
+                    }}>
+                      {f.name.split('.').pop()?.toUpperCase() || 'IMG'}
+                    </div>
+                  )}
                   <button
                     className="btn btn-danger btn-sm"
                     style={{ position: 'absolute', top: 4, right: 4, padding: '2px 6px', fontSize: 10 }}
