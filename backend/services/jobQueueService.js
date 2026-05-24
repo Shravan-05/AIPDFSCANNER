@@ -51,7 +51,7 @@ class JobQueueService {
     if (typeof fileBufferOrPath === 'string') {
       filePath = fileBufferOrPath;
     } else if (Buffer.isBuffer(fileBufferOrPath)) {
-      const uploadDir = process.env.UPLOAD_DIR || './uploads';
+      const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
       const tempFilename = `job_${jobId}_${generateFileName('input.pdf')}`;
       filePath = path.join(uploadDir, tempFilename);
       await fs.writeFile(filePath, fileBufferOrPath);
@@ -164,7 +164,7 @@ class JobQueueService {
       job.timeline[4].status = 'processing';
       this._mirrorJob(job);
 
-      const uploadDir = process.env.UPLOAD_DIR || './uploads';
+      const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
       const outputFilename = `ai_edited_${generateFileName('output.pdf')}`;
       const outputPath = path.join(uploadDir, outputFilename);
 

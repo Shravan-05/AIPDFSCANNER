@@ -18,10 +18,12 @@ const app = express();
 
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, 'uploads'));
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
+const frontendBuild = path.join(__dirname, '..', 'frontend', 'build');
+const hasFrontendBuild = fs.existsSync(frontendBuild);
 
-fs.promises.mkdir(UPLOAD_DIR, { recursive: true }).catch(() => {});
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 app.set('trust proxy', 1);
 app.set('etag', 'strong');
@@ -36,7 +38,7 @@ app.use(morgan(NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+app.use('/uploads', express.static(UPLOAD_DIR, {
   maxAge: NODE_ENV === 'production' ? '7d' : 0,
   etag: true,
   lastModified: true,
@@ -47,23 +49,23 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   }
 }));
 
-const cacheMiddleware = (duration) => {
-  return (req, res, next) => {
-    if (NODE_ENV === 'production' && req.method === 'GET') {
-      res.set('Cache-Control', `public, max-age=${duration}`);
-    }
-    next();
-  };
-};
-
-const frontendBuild = path.join(__dirname, '..', 'frontend', 'build');
-fs.promises.access(frontendBuild).then(() => {
+if (hasFrontendBuild) {
   app.use(express.static(frontendBuild, {
     maxAge: '30d',
     etag: true,
     lastModified: true
   }));
-}).catch(() => {});
+}
+
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'AuraScan AI',
+    environment: NODE_ENV,
+    frontend: hasFrontendBuild ? 'built' : 'api-only',
+    timestamp: new Date().toISOString()
+  });
+});
 
 app.get('/', (req, res) => {
   res.json({ message: 'AuraScan AI API is running' });
@@ -76,13 +78,11 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/pdf', require('./routes/pdfTools'));
 app.use('/api', require('./routes/share'));
 
-try {
-  if (fs.existsSync(frontendBuild)) {
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(frontendBuild, 'index.html'));
-    });
-  }
-} catch (e) {}
+if (hasFrontendBuild) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendBuild, 'index.html'));
+  });
+}
 
 app.use(errorHandler);
 

@@ -79,7 +79,7 @@ exports.downloadFile = async (req, res) => {
         return res.status(404).json({ msg: 'File not found' });
       }
 
-      const uploadDir = process.env.UPLOAD_DIR || './uploads';
+      const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
       const fullPath = path.join(uploadDir, pdfDoc.currentFilename);
       try {
         await fs.promises.access(fullPath);
@@ -110,7 +110,7 @@ exports.deleteFile = async (req, res) => {
         return res.status(404).json({ msg: 'File not found' });
       }
 
-      const uploadDir = process.env.UPLOAD_DIR || './uploads';
+      const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
       const fullPath = path.join(uploadDir, pdfDoc.currentFilename);
       await fs.promises.unlink(fullPath).catch(() => {});
       await PdfDocument.deleteOne({ _id: req.params.id });
@@ -162,5 +162,4 @@ exports.renameFile = async (req, res) => {
     res.status(500).json({ msg: 'Server error' });
   }
 };
-
 

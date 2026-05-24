@@ -267,7 +267,7 @@ exports.downloadSharedPdf = async (req, res) => {
       return res.status(404).json({ msg: 'PDF not yet generated' });
     }
 
-    const uploadDir = process.env.UPLOAD_DIR || './uploads';
+    const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
     const fullPath = path.join(uploadDir, pdf.currentFilename);
     try {
       await fs.promises.access(fullPath);

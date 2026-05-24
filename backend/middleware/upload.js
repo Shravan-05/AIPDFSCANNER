@@ -4,7 +4,7 @@ const { generateFileName } = require('../utils/helpers');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = process.env.UPLOAD_DIR || './uploads';
+    const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {

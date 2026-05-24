@@ -49,7 +49,7 @@ exports.mergePdfs = async (req, res) => {
     const mergedPdfBytes = await mergedPdf.save();
     
     // Save the merged PDF to uploads
-    const uploadDir = process.env.UPLOAD_DIR || './uploads';
+    const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
     const outputFilename = `merged_${generateFileName('output.pdf')}`;
     const outputPath = path.join(uploadDir, outputFilename);
     

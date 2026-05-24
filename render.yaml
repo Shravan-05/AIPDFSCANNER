@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: aipdfscanner
+    env: node
+    plan: starter
+    buildCommand: npm run render-build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disks:
+      - name: uploads
+        mountPath: /var/data
+        sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: MAX_FILE_SIZE
+        value: "10485760"
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: OLLAMA_API_URL
+        sync: false
+      - key: OLLAMA_MODEL
+        value: llama2
