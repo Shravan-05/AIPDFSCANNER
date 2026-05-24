@@ -17,11 +17,16 @@ const ScannerWorkspace = () => {
   const [ocrEnabled, setOcrEnabled] = useState(true);
   const navigate = useNavigate();
 
+  const isImageFile = (file) => {
+    const imgExts = /\.(png|jpg|jpeg|jpe|jfif|gif|webp|bmp|tif|tiff|svg|heic|heif|avif)$/i;
+    return (file.type && file.type.startsWith('image/')) || imgExts.test(file.name);
+  };
+
   const handleDrop = async (acceptedFiles) => {
     setFiles(prev => [...prev, ...acceptedFiles.map(f => ({
       file: f,
       preview: URL.createObjectURL(f),
-      previewable: f.type.startsWith('image/') && !/\.(psd|psb|exr|hdr|tga|icb|vda|vst|pbm|pgm|ppm|pnm|pfm|ras|xpm|xbm)$/i.test(f.name),
+      previewable: isImageFile(f) && !/\.(psd|psb|exr|hdr|tga|icb|vda|vst|pbm|pgm|ppm|pnm|pfm|ras|xpm|xbm)$/i.test(f.name),
       name: f.name
     }))]);
   };

@@ -30,3 +30,13 @@ exports.calculateStorageUsed = async (Scan, userId) => {
   ]);
   return result.length > 0 ? result[0].total : 0;
 };
+
+exports.pMap = async (items, fn, concurrency = 3) => {
+  const results = [];
+  for (let i = 0; i < items.length; i += concurrency) {
+    const batch = items.slice(i, i + concurrency);
+    const batchResults = await Promise.all(batch.map(fn));
+    results.push(...batchResults);
+  }
+  return results;
+};

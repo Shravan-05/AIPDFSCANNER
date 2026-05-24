@@ -3,7 +3,6 @@ const fs = require('fs').promises;
 const path = require('path');
 const { generateFileName } = require('../utils/helpers');
 const PdfDocument = require('../models/PdfDocument');
-const aiParser = require('../services/aiParserService');
 const nlpEnhancer = require('../services/nlpEnhancerService');
 const commandSuggestion = require('../services/commandSuggestionService');
 const executionSafety = require('../services/executionSafetyService');
@@ -132,29 +131,29 @@ exports.aiEdit = async (req, res) => {
       console.log(`[Quick Match] ${command} → ${quickMatch.intent} (${quickMatch.confidence})`);
     }
 
-    // 1. Parse natural language into JSON actions with context awareness using Ollama
+    // 1. Parse natural language into JSON actions using Ollama AI
     let parseResult;
     
     if (cachedResult && cachedResult.confidence >= 0.85) {
       parseResult = cachedResult;
     } else {
-      // Try Ollama first, fallback to aiParser if unavailable
-      try {
-        const ollamaResult = await ollamaService.parsePdfCommand(command, {
-          pageCount,
-          documentType: docInfo.documentType || 'document'
+      const ollamaResult = await ollamaService.parsePdfCommand(command, {
+        pageCount,
+        documentType: docInfo.documentType || 'document'
+      });
+
+      if (ollamaResult.confidence >= 0.6) {
+        parseResult = ollamaResult;
+        console.log(`[Ollama] Parsed command with ${ollamaResult.confidence} confidence, source: ${ollamaResult.source}`);
+      } else if (ollamaResult.source === 'unavailable') {
+        return res.status(503).json({
+          success: false,
+          msg: 'Ollama AI service is not running. Please start Ollama with "ollama serve" and pull a model like "ollama pull llama2". Visit https://ollama.ai for installation.',
+          clarification: true
         });
-        
-        // If Ollama provides good confidence, use it, otherwise fallback
-        if (ollamaResult.confidence >= 0.6) {
-          parseResult = ollamaResult;
-          console.log(`[Ollama] Parsed command with ${ollamaResult.confidence} confidence`);
-        } else {
-          parseResult = await aiParser.parse(command, inputMode, history);
-        }
-      } catch (error) {
-        console.warn('[Ollama Fallback] Using aiParser:', error.message);
-        parseResult = await aiParser.parse(command, inputMode, history);
+      } else {
+        parseResult = ollamaResult;
+        console.log(`[Ollama] Low confidence (${ollamaResult.confidence}), using result as-is`);
       }
     }
     parseResult.original_input = command;

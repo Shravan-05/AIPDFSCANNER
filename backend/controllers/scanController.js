@@ -6,7 +6,7 @@ const { validationResult } = require('express-validator');
 const { processImage, processImageCustom } = require('../services/imageProcessor');
 const { generatePdf } = require('../services/pdfGenerator');
 const { extractText, batchExtract } = require('../services/ocrService');
-const { calculateStorageUsed } = require('../utils/helpers');
+const { calculateStorageUsed, pMap } = require('../utils/helpers');
 const { uploadToCloud } = require('../services/cloudStorageService');
 
 exports.createScan = async (req, res) => {
@@ -27,17 +27,19 @@ exports.createScan = async (req, res) => {
     });
     let totalSize = 0;
     
-    const processPromises = req.files.map(async (file, i) => {
-      const pageNumber = i + 1;
-      const result = await processImage(file.path, {
-        autoCropEnabled: true,
-        enhanceEnabled: true,
-        scanMode
-      });
-      return { file, pageNumber, result };
-    });
-    
-    const processedResults = await Promise.all(processPromises);
+    const processedResults = await pMap(
+      req.files,
+      async (file, i) => {
+        const pageNumber = i + 1;
+        const result = await processImage(file.path, {
+          autoCropEnabled: true,
+          enhanceEnabled: true,
+          scanMode
+        });
+        return { file, pageNumber, result };
+      },
+      3
+    );
 
     for (const { file, pageNumber, result } of processedResults) {
       totalSize += file.size;
@@ -133,16 +135,18 @@ exports.addPages = async (req, res) => {
     let totalSize = 0;
     let pageCounter = scan.pages.length + 1;
 
-    const processPromises = req.files.map(async (file) => {
-      const result = await processImage(file.path, {
-        autoCropEnabled: true,
-        enhanceEnabled: true,
-        scanMode
-      });
-      return { file, result };
-    });
-    
-    const processedResults = await Promise.all(processPromises);
+    const processedResults = await pMap(
+      req.files,
+      async (file) => {
+        const result = await processImage(file.path, {
+          autoCropEnabled: true,
+          enhanceEnabled: true,
+          scanMode
+        });
+        return { file, result };
+      },
+      3
+    );
 
     const newPages = [];
     for (const { file, result } of processedResults) {

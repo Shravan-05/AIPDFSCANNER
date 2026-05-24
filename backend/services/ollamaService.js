@@ -3,6 +3,20 @@ class OllamaService {
     this.baseUrl = process.env.OLLAMA_API_URL || 'http://localhost:11434';
     this.model = process.env.OLLAMA_MODEL || 'llama2';
     this.timeout = 300000; // 5 minutes
+    this._available = null;
+    this._lastCheck = 0;
+  }
+
+  _isAvailableCached() {
+    if (this._available !== null && Date.now() - this._lastCheck < 15000) {
+      return this._available;
+    }
+    return null;
+  }
+
+  _setAvailable(val) {
+    this._available = val;
+    this._lastCheck = Date.now();
   }
 
   async request(path, options = {}, timeoutMs = this.timeout) {
@@ -29,10 +43,17 @@ class OllamaService {
    * Check if Ollama service is available
    */
   async isAvailable() {
+    const cached = this._isAvailableCached();
+    if (cached !== null) return cached;
+
     try {
-      const response = await this.request('/api/tags', { method: 'GET' }, 5000);
-      return response.ok && response.data.models && response.data.models.length > 0;
+      const response = await this.request('/api/tags', { method: 'GET' }, 3000);
+      const ok = response.ok && response.data.models && response.data.models.length > 0;
+      this._setAvailable(ok);
+      if (!ok) console.warn('[Ollama] No models found');
+      return ok;
     } catch (error) {
+      this._setAvailable(false);
       console.warn('[Ollama] Service unavailable:', error.message);
       return false;
     }
@@ -45,8 +66,16 @@ class OllamaService {
     try {
       const isAvailable = await this.isAvailable();
       if (!isAvailable) {
-        console.warn('[Ollama] Service unavailable, using fallback parser');
-        return this.fallbackParsePdfCommand(command, context);
+        console.warn('[Ollama] Service unavailable');
+        return {
+          intent: 'UNKNOWN',
+          confidence: 0,
+          source: 'unavailable',
+          actions: [],
+          entities: { pages: [] },
+          needs_clarification: true,
+          clarification_question: 'Ollama AI is not running. Start it with "ollama serve" and pull a model.'
+        };
       }
 
       const prompt = `Parse this PDF editing command and return a JSON structure for this app.
@@ -123,7 +152,7 @@ Only return valid JSON, no explanations.`;
   async analyzeDocument(text, maxLength = 2000) {
     try {
       const isAvailable = await this.isAvailable();
-      if (!isAvailable) return { analysis: null, source: 'fallback' };
+      if (!isAvailable) return { analysis: null, source: 'unavailable' };
 
       const truncatedText = text.substring(0, maxLength);
       const prompt = `Analyze this document text and provide:
@@ -179,7 +208,7 @@ Return as JSON:
   async generateOcrSuggestions(ocrText, metadata = {}) {
     try {
       const isAvailable = await this.isAvailable();
-      if (!isAvailable) return { suggestions: [], source: 'fallback' };
+      if (!isAvailable) return { suggestions: [], source: 'unavailable' };
 
       const preview = ocrText.substring(0, 1500);
       const prompt = `Given this OCR text, suggest 3 improvements:
@@ -381,10 +410,11 @@ Return JSON:
    * Test connection to Ollama service
    */
   async testConnection() {
+    this._available = null; // Force fresh check
     try {
       const available = await this.isAvailable();
       if (available) {
-        return { success: true, message: 'Connected to Ollama', url: this.baseUrl };
+        return { success: true, message: `Connected to Ollama (${this.model})`, url: this.baseUrl };
       }
       return { success: false, message: 'Ollama service not responding', url: this.baseUrl };
     } catch (error) {

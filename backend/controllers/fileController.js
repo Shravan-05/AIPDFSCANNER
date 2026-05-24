@@ -14,17 +14,21 @@ exports.getFiles = async (req, res) => {
       queryPdf.originalFilename = { $regex: search, $options: 'i' };
     }
 
-    const itemsLimit = parseInt(limit);
-    const itemsPage = parseInt(page);
+    const itemsLimit = Math.min(parseInt(limit), 100);
+    const itemsPage = Math.max(parseInt(page), 1);
+
+    const MAX_FETCH = 200;
 
     const [scans, pdfs, totalScans, totalPdfs] = await Promise.all([
       Scan.find(queryScan)
         .select('title totalPages fileSize createdAt updatedAt isFavorite pdfUrl')
         .sort(sort)
+        .limit(MAX_FETCH)
         .lean(),
       PdfDocument.find(queryPdf)
         .select('originalFilename numPages size filepath createdAt updatedAt')
         .sort(sort)
+        .limit(MAX_FETCH)
         .lean(),
       Scan.countDocuments(queryScan),
       PdfDocument.countDocuments(queryPdf)

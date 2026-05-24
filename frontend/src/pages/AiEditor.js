@@ -5,6 +5,7 @@ import {
   Mic, MicOff, Volume2, VolumeX, Sparkles, Zap,
   ChevronRight, ChevronLeft, RotateCcw, RotateCw, Trash2, CheckCircle2, AlertCircle, PlayCircle
 } from 'lucide-react';
+import PdfPreview from '../components/UI/PdfPreview';
 import pdfToolsAPI from '../services/pdfToolsAPI';
 import { filesAPI } from '../services/api';
 import { showToast } from '../components/UI/Toast';
@@ -20,7 +21,7 @@ const SUGGESTIONS = [
 ];
 
 // ─── Chat Bubble Component ────────────────────────────────────────────────────
-const ChatBubble = ({ msg }) => {
+const ChatBubble = React.memo(({ msg }) => {
   const isAI = msg.sender === 'ai';
   return (
     <div style={{
@@ -90,18 +91,21 @@ const ChatBubble = ({ msg }) => {
       </div>
     </div>
   );
-};
+});
 
 // ─── Canvas Soundwave Visualizer ──────────────────────────────────────────────
-const CanvasWaveform = ({ isListening }) => {
+const CanvasWaveform = React.memo(({ isListening }) => {
   const canvasRef = useRef(null);
+  const animRef = useRef(null);
 
   useEffect(() => {
-    if (!isListening) return;
+    if (!isListening) {
+      if (animRef.current) { cancelAnimationFrame(animRef.current); animRef.current = null; }
+      return;
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    let animationId;
     let phase = 0;
 
     const render = () => {
@@ -114,7 +118,8 @@ const CanvasWaveform = ({ isListening }) => {
         { color: 'rgba(236, 72, 153, 0.35)', amp: 4, speed: 0.12 }
       ];
 
-      waves.forEach((wave) => {
+      for (let i = 0; i < waves.length; i++) {
+        const wave = waves[i];
         ctx.strokeStyle = wave.color;
         ctx.shadowColor = wave.color;
         ctx.shadowBlur = 4;
@@ -125,14 +130,14 @@ const CanvasWaveform = ({ isListening }) => {
           else ctx.lineTo(x, y);
         }
         ctx.stroke();
-      });
+      }
 
       phase += 1;
-      animationId = requestAnimationFrame(render);
+      animRef.current = requestAnimationFrame(render);
     };
 
     render();
-    return () => cancelAnimationFrame(animationId);
+    return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
   }, [isListening]);
 
   return (
@@ -143,7 +148,7 @@ const CanvasWaveform = ({ isListening }) => {
       style={{ display: 'block', background: 'transparent', width: 120, height: 28 }}
     />
   );
-};
+});
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const AiEditor = () => {
@@ -197,11 +202,25 @@ const AiEditor = () => {
   const manualStopRef = useRef(false);
   const inputRef        = useRef(null);
   const pollingRef      = useRef(null);
+  const objectUrlsRef   = useRef([]);
 
   // ── Scroll to bottom ────────────────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // ── Object URL Cleanup ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const urls = objectUrlsRef.current;
+    return () => { urls.forEach(u => { try { URL.revokeObjectURL(u); } catch (_) {} }); };
+  }, []);
+
+  const trackUrl = useCallback((url) => {
+    if (url && url.startsWith('blob:')) {
+      objectUrlsRef.current = [...objectUrlsRef.current.filter(u => u !== url), url];
+    }
+    return url;
+  }, []);
 
   // ── Polling Cleanup ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -209,6 +228,9 @@ const AiEditor = () => {
   }, []);
 
   // ── Speech Recognition setup ─────────────────────────────────────────────────
+  const autoSubmitRef = useRef(autoSubmit);
+  autoSubmitRef.current = autoSubmit;
+
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return;
@@ -238,7 +260,6 @@ const AiEditor = () => {
         const final = transcript;
         setInputCommand(final);
 
-        // Auto-submit triggers
         const TRIGGERS = ['send it', 'execute now', 'do it', 'run command', 'send document'];
         const lc = final.toLowerCase();
         const hit = TRIGGERS.find(t => lc.endsWith(t));
@@ -246,7 +267,7 @@ const AiEditor = () => {
         if (hit) {
           const cmd = final.slice(0, final.length - hit.length).trim();
           if (cmd) { setInputCommand(cmd); setTimeout(() => doSubmit(cmd, 'voice'), 300); }
-        } else if (autoSubmit && !manualStopRef.current) {
+        } else if (autoSubmitRef.current && !manualStopRef.current) {
           setTimeout(() => doSubmit(final, 'voice'), 500);
         }
       }
@@ -263,7 +284,7 @@ const AiEditor = () => {
 
     recognitionRef.current = rec;
     return () => { try { rec.abort(); } catch (_) {} };
-  }, [autoSubmit]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Keyboard Shortcuts (Alt+V or Ctrl+Space) ─────────────────────────────────
   useEffect(() => {
@@ -362,11 +383,11 @@ const AiEditor = () => {
       return;
     }
 
-    const newFiles = pdfs.map(f => ({
-      file: f,
-      url: URL.createObjectURL(f),
-      id: Math.random().toString(36).substring(7)
-    }));
+    const newFiles = pdfs.map(f => {
+      const url = URL.createObjectURL(f);
+      trackUrl(url);
+      return { file: f, url, id: Math.random().toString(36).substring(7) };
+    });
 
     setUploadedFiles(prev => [...prev, ...newFiles]);
 
@@ -383,10 +404,10 @@ const AiEditor = () => {
     addAIMessage(msg, 'FILE_LOADED', 1.0);
     speak(`Loaded ${primary.file.name}. Analyzing.`);
 
-    // Classify the PDF
-    await classifyDocument(primary.file);
+    // Classify the PDF (fire-and-forget)
+    classifyDocument(primary.file);
 
-    setTimeout(() => inputRef.current?.focus(), 200);
+    setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   const handleFileUpload = async (e) => {
@@ -426,6 +447,8 @@ const AiEditor = () => {
     e.stopPropagation();
     const target = uploadedFiles.find(f => f.id === id);
     if (!target) return;
+
+    try { URL.revokeObjectURL(target.url); } catch (_) {}
 
     const remaining = uploadedFiles.filter(f => f.id !== id);
     setUploadedFiles(remaining);
@@ -710,11 +733,11 @@ const AiEditor = () => {
       onDrop={handleDrop}
       style={{
         display: 'flex', flexDirection: isMobile ? 'column' : 'row',
-        height: isMobile ? 'auto' : 'calc(100vh - 96px)',
-        minHeight: isMobile ? 'calc(100vh - 120px)' : 'auto',
-        gap: isMobile ? 12 : 20,
-        overflow: isMobile ? 'auto' : 'hidden',
-        position: 'relative', padding: isMobile ? '0 0 80px' : 0
+        height: isMobile ? 'calc(100vh - 112px)' : 'calc(100vh - 96px)',
+        gap: isMobile ? 8 : 20,
+        overflow: 'hidden',
+        position: 'relative',
+        paddingBottom: isMobile && sidebarCollapsed ? 64 : 0
       }}
     >
       {isDragActive && (
@@ -741,30 +764,38 @@ const AiEditor = () => {
           padding: '10px 14px', display: 'flex', flexDirection: 'column',
           borderBottom: '1px solid var(--border-color)', background: 'var(--bg-secondary)', gap: 10
         }}>
-          <div className="ai-editor-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <FileText size={17} color="var(--accent-primary)" /> AI Workspace Viewport
+          <div className="ai-editor-toolbar" style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            gap: 8, flexWrap: 'wrap'
+          }}>
+            <h2 style={{
+              margin: 0, fontSize: 'clamp(13px, 3vw, 15px)', fontWeight: 700,
+              display: 'flex', alignItems: 'center', gap: 8
+            }}>
+              <FileText size={17} color="var(--accent-primary)" /> AI Workspace
             </h2>
-            <div className="ai-editor-toolbar-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              
+            <div className="ai-editor-toolbar-actions" style={{
+              display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap'
+            }}>
+             
               {/* Undo / Redo controls */}
               {activeFile && (
                 <div style={{
                   display: 'flex', border: '1px solid var(--border-color)',
-                  borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', marginRight: 8
+                  borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)'
                 }}>
                   <button
                     onClick={handleUndo}
                     disabled={historyIndex <= 0 || processing}
                     title="Undo"
                     style={{
-                      border: 'none', background: 'transparent', padding: '6px 12px',
+                      border: 'none', background: 'transparent', padding: '4px 8px',
                       cursor: historyIndex <= 0 ? 'not-allowed' : 'pointer',
                       color: historyIndex <= 0 ? 'var(--text-tertiary)' : 'var(--text-secondary)',
-                      display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600
+                      display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600
                     }}
                   >
-                    <RotateCcw size={13} /> Undo
+                    <RotateCcw size={12} /> <span className="hide-mobile">Undo</span>
                   </button>
                   <div style={{ width: 1, background: 'var(--border-color)' }} />
                   <button
@@ -772,13 +803,13 @@ const AiEditor = () => {
                     disabled={historyIndex >= historyStack.length - 1 || processing}
                     title="Redo"
                     style={{
-                      border: 'none', background: 'transparent', padding: '6px 12px',
+                      border: 'none', background: 'transparent', padding: '4px 8px',
                       cursor: historyIndex >= historyStack.length - 1 ? 'not-allowed' : 'pointer',
                       color: historyIndex >= historyStack.length - 1 ? 'var(--text-tertiary)' : 'var(--text-secondary)',
-                      display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600
+                      display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600
                     }}
                   >
-                    Redo <RotateCw size={13} />
+                    <span className="hide-mobile">Redo</span> <RotateCw size={12} />
                   </button>
                 </div>
               )}
@@ -793,23 +824,26 @@ const AiEditor = () => {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={processing}
                 style={{
-                  padding: '6px 14px', fontSize: 12, fontWeight: 600,
+                  padding: '5px 10px', fontSize: 'clamp(11px, 2.5vw, 12px)', fontWeight: 600,
                   border: '1px solid var(--border-color)',
                   background: 'var(--bg-primary)', color: 'var(--text-secondary)',
                   borderRadius: 'var(--radius-md)', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 6
+                  display: 'flex', alignItems: 'center', gap: 4
                 }}
               >
-                <UploadCloud size={14} /> Import PDFs
+                <UploadCloud size={13} /> <span className="hide-mobile">Import</span> PDFs
               </button>
               {activeFile && (
                 <button
                   className="btn btn-primary"
                   onClick={downloadCurrentPdf}
                   disabled={processing}
-                  style={{ padding: '6px 14px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}
+                  style={{
+                    padding: '5px 10px', fontSize: 'clamp(11px, 2.5vw, 12px)',
+                    display: 'flex', alignItems: 'center', gap: 4
+                  }}
                 >
-                  <Download size={14} /> Download Active
+                  <Download size={13} /> <span className="hide-mobile">Download</span>
                 </button>
               )}
             </div>
@@ -885,13 +919,12 @@ const AiEditor = () => {
         </div>
 
         {/* Viewport content */}
-        <div style={{ flex: 1, position: 'relative', background: 'var(--bg-tertiary)' }}>
+        <div style={{
+          flex: 1, position: 'relative', background: 'var(--bg-tertiary)',
+          overflow: 'hidden', minHeight: 300
+        }}>
           {activeUrl ? (
-            <embed
-              src={`${activeUrl}#toolbar=0&navpanes=0`}
-              type="application/pdf" width="100%" height="100%"
-              style={{ border: 'none', display: 'block' }}
-            />
+            <PdfPreview url={activeUrl} fileName={activeFile?.name} />
           ) : (
             <div style={{
               position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
@@ -996,7 +1029,7 @@ const AiEditor = () => {
           borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)',
           background: 'rgba(20, 20, 35, 0.85)', backdropFilter: 'blur(20px)',
           boxShadow: 'var(--shadow-lg)', animation: 'slideRight 0.3s ease',
-          ...(isMobile ? { maxHeight: '50vh', minHeight: 300 } : {})
+          ...(isMobile ? { maxHeight: '40vh', minHeight: 280 } : {})
         }}>
 
           {/* Sidebar Header */}
