@@ -25,6 +25,24 @@ services:
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: OLLAMA_API_URL
-        sync: false
+        value: http://ollama:11434
       - key: OLLAMA_MODEL
-        value: llama2
+        value: llama3.2:1b
+
+  - type: private
+    name: ollama
+    env: docker
+    dockerfilePath: ./ollama.Dockerfile
+    plan: starter
+    autoDeploy: true
+    disks:
+      - name: ollama-models
+        mountPath: /root/.ollama/models
+        sizeGB: 10
+    envVars:
+      - key: OLLAMA_HOST
+        value: 0.0.0.0
+      - key: OLLAMA_MODEL
+        value: llama3.2:1b
+      - key: OLLAMA_KEEP_ALIVE
+        value: 24h

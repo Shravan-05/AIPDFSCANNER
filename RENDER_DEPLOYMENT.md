@@ -1,30 +1,65 @@
 # Render Deployment
 
-This repo is ready to run as one Render Web Service. Express serves the API and the built React app.
+This repo is ready to deploy as a **Render Blueprint** with two connected services:
+1. **aipdfscanner** — Node web service (Express API + React frontend)
+2. **ollama** — Private Docker service running Ollama with `llama3.2:1b`
 
-## Recommended Render settings
+## One-Click Blueprint Deploy
 
-- Runtime: Node
-- Build command: `npm run render-build`
-- Start command: `npm start`
-- Health check path: `/api/health`
+1. Push this repo to GitHub/GitLab
+2. In Render Dashboard → Blueprint → Connect your repo
+3. Render auto-detects `render.yaml` and creates both services
+4. Fill in the required env vars when prompted:
+   - `MONGODB_URI` — MongoDB Atlas connection string
+   - `JWT_SECRET` — strong random secret
 
-The included `render.yaml` can be used as a Render Blueprint.
+## How the services communicate
 
-## Required environment variables
+- The `ollama` private service is accessible at `http://ollama:11434` within Render's internal network
+- The `aipdfscanner` web service auto-discovers it via `OLLAMA_API_URL=http://ollama:11434`
+- A 10GB persistent disk is mounted at `/root/.ollama/models` so the model persists across restarts
 
-- `MONGODB_URI`: MongoDB Atlas connection string
-- `JWT_SECRET`: strong random secret
-- `NODE_ENV`: `production`
-- `UPLOAD_DIR`: `/var/data/uploads` if using the included persistent disk
+## Environment Variables
 
-Optional:
+### Web Service (aipdfscanner)
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `MONGODB_URI` | Yes | — | MongoDB connection string |
+| `JWT_SECRET` | Yes | — | JWT signing secret |
+| `JWT_EXPIRES_IN` | No | `7d` | Token expiry duration |
+| `NODE_ENV` | No | `production` | Environment |
+| `UPLOAD_DIR` | No | `/var/data/uploads` | File upload directory |
+| `OLLAMA_API_URL` | No | `http://ollama:11434` | Ollama internal endpoint |
+| `OLLAMA_MODEL` | No | `llama3.2:1b` | Ollama model name |
 
-- `CORS_ORIGIN`: set to your Render app URL if you later split frontend/backend. Leave unset for same-service deployment.
-- `OLLAMA_API_URL`: URL for a reachable Ollama service. Do not use `localhost` on Render unless Ollama runs in the same service.
-- `OLLAMA_MODEL`: model name, default `llama2`
+### Private Service (ollama)
+Set in `render.yaml` — no manual configuration needed.
 
-## Notes
+## Architecture
 
-- Render's filesystem is ephemeral unless you add a persistent disk. The blueprint mounts `/var/data` and stores uploads in `/var/data/uploads`.
-- If Ollama is not reachable, AI command parsing falls back to the local rule parser so the app still runs.
+```
+User → Render LB → aipdfscanner (Node, port 10000)
+                        ↓ (Render Internal Network)
+                    ollama (Docker, port 11434)
+                        ↓
+                    /root/.ollama/models/ (10GB persistent disk)
+```
+
+- The app works fully without Ollama — it falls back to the built-in rule-based command parser
+- First deploy is slower (~2-3 min) as Render builds both services and Ollama downloads the model
+- Subsequent deploys are faster thanks to build caching and the persistent disk
+
+## Local Development
+
+```bash
+# Install dependencies
+npm run install:all
+
+# Start backend
+npm run dev:backend
+
+# Start frontend (separate terminal)
+npm run dev:frontend
+```
+
+Make sure Ollama is running locally: `ollama serve`

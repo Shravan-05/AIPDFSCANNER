@@ -7,6 +7,29 @@ class OllamaService {
     this._lastCheck = 0;
   }
 
+  _safeJsonParse(text) {
+    try {
+      return JSON.parse(text);
+    } catch (_) {}
+
+    let cleaned = text
+      .replace(/\/\/.*$/gm, '')                 // remove single-line comments
+      .replace(/,\s*([}\]])/g, '$1')             // remove trailing commas
+      .replace(/(['"])?([a-zA-Z_][a-zA-Z0-9_]*)(['"])?\s*:/g, '"$2":')  // quote bare keys
+      .replace(/'/g, '"')                        // single quotes -> double quotes
+      .replace(/\b(null|true|false)\b/g, (m) => m.toLowerCase()) // lowercase booleans
+      .replace(/,\s*,/g, ',')                    // remove double commas
+      .replace(/\\(?!["\\\/bfnrtu])/g, '')       // remove invalid escapes
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    try {
+      return JSON.parse(cleaned);
+    } catch (_) {}
+
+    return null;
+  }
+
   _isAvailableCached() {
     if (this._available !== null && Date.now() - this._lastCheck < 15000) {
       return this._available;
@@ -126,7 +149,7 @@ Only return valid JSON, no explanations.`;
           // Extract JSON from response
           const jsonMatch = response.data.response.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
+            const parsed = this._safeJsonParse(jsonMatch[0]);
             const normalized = this.normalizeParseResult(parsed, command);
             return {
               ...normalized,
@@ -186,7 +209,7 @@ Return as JSON:
           const jsonMatch = response.data.response.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             return {
-              analysis: JSON.parse(jsonMatch[0]),
+              analysis: this._safeJsonParse(jsonMatch[0]),
               source: 'ollama'
             };
           }
@@ -237,7 +260,7 @@ Return JSON:
           const jsonMatch = response.data.response.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             return {
-              suggestions: JSON.parse(jsonMatch[0]).suggestions || [],
+              suggestions: (this._safeJsonParse(jsonMatch[0]) || {}).suggestions || [],
               source: 'ollama'
             };
           }
