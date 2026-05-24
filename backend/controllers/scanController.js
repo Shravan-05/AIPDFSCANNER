@@ -9,6 +9,20 @@ const { extractText, batchExtract } = require('../services/ocrService');
 const { calculateStorageUsed, pMap } = require('../utils/helpers');
 const { uploadToCloud } = require('../services/cloudStorageService');
 
+const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
+
+function toUrl(absPath) {
+  if (!absPath) return '';
+  const rel = path.relative(UPLOAD_DIR, absPath).replace(/\\/g, '/');
+  return `uploads/${rel}`;
+}
+
+function toAbsolute(url) {
+  if (!url) return '';
+  const rel = url.replace(/^uploads\//, '');
+  return path.join(UPLOAD_DIR, rel);
+}
+
 exports.createScan = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -44,9 +58,9 @@ exports.createScan = async (req, res) => {
     for (const { file, pageNumber, result } of processedResults) {
       totalSize += file.size;
       scan.pages.push({
-        originalImage: file.path,
-        processedImage: result.processedPath,
-        thumbnailUrl: result.thumbnailPath,
+        originalImage: toUrl(file.path),
+        processedImage: toUrl(result.processedPath),
+        thumbnailUrl: toUrl(result.thumbnailPath),
         pageNumber,
         ocrText: '',
         enhancement: { brightness: 1.0, contrast: 1.0, saturation: 1.0, sharpness: 1.0 }
@@ -106,7 +120,7 @@ exports.createScan = async (req, res) => {
 exports._runBackgroundOcr = async (scanId, pages, lang) => {
   try {
     const results = await batchExtract(
-      pages.map(p => p.processedImage),
+      pages.map(p => toAbsolute(p.processedImage)),
       lang
     );
     const scan = await Scan.findById(scanId);
@@ -152,9 +166,9 @@ exports.addPages = async (req, res) => {
     for (const { file, result } of processedResults) {
       totalSize += file.size;
       const page = {
-        originalImage: file.path,
-        processedImage: result.processedPath,
-        thumbnailUrl: result.thumbnailPath,
+        originalImage: toUrl(file.path),
+        processedImage: toUrl(result.processedPath),
+        thumbnailUrl: toUrl(result.thumbnailPath),
         pageNumber: pageCounter++,
         ocrText: '',
         enhancement: { brightness: 1.0, contrast: 1.0, saturation: 1.0, sharpness: 1.0 }
@@ -188,7 +202,7 @@ exports.addPages = async (req, res) => {
 
 exports.getScan = async (req, res) => {
   try {
-    const scan = await Scan.findOne({ _id: req.params.id, user: req.user.id, 'pages.isDeleted': false });
+    const scan = await Scan.findOne({ _id: req.params.id, user: req.user.id, 'pages.isDeleted': false }).lean();
     if (!scan) {
       return res.status(404).json({ msg: 'Scan not found' });
     }
@@ -396,8 +410,8 @@ exports.exportPdf = async (req, res) => {
       quality,
       password
     });
-    scan.pdfUrl = pdfPath;
-    scan.exportHistory.push({ url: pdfPath, format: 'pdf', createdAt: new Date() });
+    scan.pdfUrl = toUrl(pdfPath);
+    scan.exportHistory.push({ url: toUrl(pdfPath), format: 'pdf', createdAt: new Date() });
     await scan.save();
 
     const cloudConfig = user.preferences?.cloudStorage;
@@ -461,29 +475,30 @@ exports.updatePage = async (req, res) => {
       return res.status(404).json({ msg: 'Page not found' });
     }
     
-    const result = await processImageCustom(page.originalImage, {
+    const result = await processImageCustom(toAbsolute(page.originalImage), {
       cropCoordinates,
       enhancement,
       scanMode
     });
     
-    const oldProcessed = page.processedImage;
-    const oldThumb = page.thumbnailUrl;
+    const oldProcessed = toAbsolute(page.processedImage);
+    const oldThumb = toAbsolute(page.thumbnailUrl);
+    const oldOrig = toAbsolute(page.originalImage);
     
     await Promise.all([
-      oldProcessed && oldProcessed !== page.originalImage
+      oldProcessed && oldProcessed !== oldOrig
         ? fs.promises.unlink(oldProcessed).catch(() => {}) : Promise.resolve(),
-      oldThumb && oldThumb !== page.originalImage
+      oldThumb && oldThumb !== oldOrig
         ? fs.promises.unlink(oldThumb).catch(() => {}) : Promise.resolve()
     ]);
     
-    page.processedImage = result.processedPath;
-    page.thumbnailUrl = result.thumbnailPath;
+    page.processedImage = toUrl(result.processedPath);
+    page.thumbnailUrl = toUrl(result.thumbnailPath);
     if (cropCoordinates) page.cropCoordinates = cropCoordinates;
     if (enhancement) page.enhancement = enhancement;
     if (scanMode) {
       try {
-        const ocr = await extractText(result.processedPath);
+        const ocr = await extractText(toAbsolute(result.processedPath));
         page.ocrText = ocr.text;
       } catch (ocrErr) {
         console.error('OCR re-run error:', ocrErr);
@@ -605,7 +620,7 @@ exports.mergeScans = async (req, res) => {
     let totalSize = 0;
     for (const p of mergedPages) {
       try {
-        await fs.promises.stat(p.originalImage).then(s => { totalSize += s.size; }).catch(() => {});
+        await fs.promises.stat(toAbsolute(p.originalImage)).then(s => { totalSize += s.size; }).catch(() => {});
       } catch {}
     }
 
@@ -618,9 +633,9 @@ exports.mergeScans = async (req, res) => {
       pages: mergedPages,
       totalPages: mergedPages.length,
       fileSize: totalSize,
-      pdfUrl: pdfPath,
+      pdfUrl: toUrl(pdfPath),
       ocrText: mergedPages.map(p => p.ocrText).filter(Boolean).join(' '),
-      exportHistory: [{ url: pdfPath, format: 'pdf', createdAt: new Date() }]
+      exportHistory: [{ url: toUrl(pdfPath), format: 'pdf', createdAt: new Date() }]
     });
     await mergedScan.save();
 
@@ -668,7 +683,7 @@ exports.splitScan = async (req, res) => {
 
       let pageSize = 0;
       try {
-        await fs.promises.stat(singlePage.originalImage).then(s => { pageSize = s.size; }).catch(() => {});
+        await fs.promises.stat(toAbsolute(singlePage.originalImage)).then(s => { pageSize = s.size; }).catch(() => {});
       } catch {};
 
       const splitScan = new Scan({
@@ -679,9 +694,9 @@ exports.splitScan = async (req, res) => {
         pages: [singlePage],
         totalPages: 1,
         fileSize: pageSize,
-        pdfUrl: pdfPath,
+        pdfUrl: toUrl(pdfPath),
         ocrText: singlePage.ocrText || '',
-        exportHistory: [{ url: pdfPath, format: 'pdf', createdAt: new Date() }]
+        exportHistory: [{ url: toUrl(pdfPath), format: 'pdf', createdAt: new Date() }]
       });
       await splitScan.save();
       createdScans.push(splitScan);
@@ -716,11 +731,10 @@ exports.annotatePage = async (req, res) => {
 
     const { applyAnnotation } = require('../services/imageProcessor');
     
-    // We apply the annotation to the current processedImage
-    const result = await applyAnnotation(page.processedImage, req.file.path);
+    const result = await applyAnnotation(toAbsolute(page.processedImage), req.file.path);
     
-    page.processedImage = result.processedPath;
-    page.thumbnailUrl = result.thumbnailPath;
+    page.processedImage = toUrl(result.processedPath);
+    page.thumbnailUrl = toUrl(result.thumbnailPath);
 
     await scan.save();
 

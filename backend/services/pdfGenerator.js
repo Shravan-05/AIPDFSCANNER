@@ -2,6 +2,15 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 
+const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads'));
+
+function toAbsolute(url) {
+  if (!url) return '';
+  if (path.isAbsolute(url)) return url;
+  const rel = url.replace(/^uploads\//, '');
+  return path.join(UPLOAD_DIR, rel);
+}
+
 /**
  * Generate a PDF from an array of page objects.
  * Each page must have processedImage or originalImage pointing to an existing file.
@@ -47,13 +56,8 @@ exports.generatePdf = async (pages, options = {}) => {
       let pagesAdded = 0;
 
       for (const page of pages) {
-        // Resolve correct image path - prefer processedImage, fall back to originalImage
-        let imagePath = page.processedImage || page.originalImage;
+        let imagePath = toAbsolute(page.processedImage || page.originalImage);
 
-        // Normalize Windows backslashes
-        if (imagePath) imagePath = imagePath.replace(/\\/g, '/');
-
-        // Skip pages with no valid image file
         if (!imagePath || !fs.existsSync(imagePath)) {
           console.warn(`[PDF] Skipping page ${page.pageNumber} - file not found: ${imagePath}`);
           continue;

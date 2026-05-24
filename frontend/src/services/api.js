@@ -97,11 +97,10 @@ export const getFileUrl = (filePath) => {
     filePath.startsWith('blob:') ||
     filePath.startsWith('data:')
   ) return filePath;
-  const normalizedPath = filePath.replace(/\\/g, '/');
   const host = process.env.REACT_APP_API_URL
-    ? process.env.REACT_APP_API_URL.replace('/api', '')
+    ? process.env.REACT_APP_API_URL.replace(/\/api$/, '')
     : '';
-  return `${host}/${normalizedPath}`;
+  return `${host}/${filePath.replace(/\\/g, '/')}`;
 };
 
 export default api;

@@ -43,15 +43,19 @@ app.use('/uploads', express.static(UPLOAD_DIR, {
   etag: true,
   lastModified: true,
   setHeaders: (res, filePath) => {
-    if (filePath.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+    if (filePath.match(/\.(jpg|jpeg|png|gif|webp|avif|webp)$/i)) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+    if (filePath.match(/\.pdf$/i)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
     }
   }
 }));
 
 if (hasFrontendBuild) {
   app.use(express.static(frontendBuild, {
-    maxAge: '30d',
+    maxAge: '365d',
+    immutable: true,
     etag: true,
     lastModified: true
   }));

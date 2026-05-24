@@ -1,6 +1,8 @@
 const sharp = require('sharp');
 const path = require('path');
 
+sharp.cache({ memory: 50 });
+
 exports.detectDocumentEdges = async (imagePath) => {
   try {
     const metadata = await sharp(imagePath).metadata();
