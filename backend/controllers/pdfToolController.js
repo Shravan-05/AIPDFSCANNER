@@ -145,15 +145,9 @@ exports.aiEdit = async (req, res) => {
       if (ollamaResult.confidence >= 0.6) {
         parseResult = ollamaResult;
         console.log(`[Ollama] Parsed command with ${ollamaResult.confidence} confidence, source: ${ollamaResult.source}`);
-      } else if (ollamaResult.source === 'unavailable') {
-        return res.status(503).json({
-          success: false,
-          msg: 'Ollama AI service is not running. Please start Ollama with "ollama serve" and pull a model like "ollama pull llama2". Visit https://ollama.ai for installation.',
-          clarification: true
-        });
       } else {
         parseResult = ollamaResult;
-        console.log(`[Ollama] Low confidence (${ollamaResult.confidence}), using result as-is`);
+        console.log(`[Ollama] Low confidence (${ollamaResult.confidence}), using result as-is (source: ${ollamaResult.source})`);
       }
     }
     parseResult.original_input = command;

@@ -69,17 +69,31 @@ class OllamaService {
     const cached = this._isAvailableCached();
     if (cached !== null) return cached;
 
-    try {
-      const response = await this.request('/api/tags', { method: 'GET' }, 3000);
-      const ok = response.ok && response.data.models && response.data.models.length > 0;
-      this._setAvailable(ok);
-      if (!ok) console.warn('[Ollama] No models found');
-      return ok;
-    } catch (error) {
-      this._setAvailable(false);
-      console.warn('[Ollama] Service unavailable:', error.message);
-      return false;
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await this.request('/api/tags', { method: 'GET' }, 15000);
+        const ok = response.ok && response.data.models && response.data.models.length > 0;
+        if (ok) {
+          this._setAvailable(true);
+          return true;
+        }
+        if (attempt < maxRetries) {
+          console.warn(`[Ollama] No models found (attempt ${attempt}/${maxRetries}), retrying...`);
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      } catch (error) {
+        if (attempt < maxRetries) {
+          console.warn(`[Ollama] Connection failed (attempt ${attempt}/${maxRetries}): ${error.message}, retrying...`);
+          await new Promise(r => setTimeout(r, 2000));
+        } else {
+          this._setAvailable(false);
+          console.warn('[Ollama] Service unavailable after retries:', error.message);
+        }
+      }
     }
+    this._setAvailable(false);
+    return false;
   }
 
   /**
@@ -89,15 +103,12 @@ class OllamaService {
     try {
       const isAvailable = await this.isAvailable();
       if (!isAvailable) {
-        console.warn('[Ollama] Service unavailable');
+        console.warn('[Ollama] Service unavailable, using fallback parser');
+        const fallback = this.fallbackParsePdfCommand(command, context);
         return {
-          intent: 'UNKNOWN',
-          confidence: 0,
-          source: 'unavailable',
-          actions: [],
-          entities: { pages: [] },
-          needs_clarification: true,
-          clarification_question: 'Ollama AI is not running. Start it with "ollama serve" and pull a model.'
+          ...fallback,
+          source: 'fallback',
+          ollama_status: 'unavailable'
         };
       }
 
