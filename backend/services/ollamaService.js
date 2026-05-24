@@ -43,10 +43,11 @@ class OllamaService {
   }
 
   async request(path, options = {}, timeoutMs = this.timeout) {
+    const url = `${this.baseUrl}${path}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(`${this.baseUrl}${path}`, {
+      const response = await fetch(url, {
         ...options,
         signal: controller.signal,
         headers: {
@@ -57,6 +58,11 @@ class OllamaService {
 
       const data = await response.json().catch(() => ({}));
       return { status: response.status, ok: response.ok, data };
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error(`Timeout after ${timeoutMs}ms connecting to ${url}`);
+      }
+      throw new Error(`${error.message} (trying ${url})`);
     } finally {
       clearTimeout(timer);
     }
@@ -445,14 +451,40 @@ Return JSON:
    */
   async testConnection() {
     this._available = null; // Force fresh check
+    const url = this.baseUrl;
+    const model = this.model;
+    const diagnostics = { url, model, node_version: process.version };
+
     try {
-      const available = await this.isAvailable();
-      if (available) {
-        return { success: true, message: `Connected to Ollama (${this.model})`, url: this.baseUrl };
+      // Try DNS resolution first
+      const hostname = url.replace(/^https?:\/\//, '').replace(/:.*$/, '');
+      const dns = await import('dns/promises').catch(() => null);
+      if (dns) {
+        try {
+          const addrs = await dns.default.resolve4(hostname);
+          diagnostics.dns = addrs;
+        } catch (dnsErr) {
+          diagnostics.dns_error = dnsErr.message;
+        }
       }
-      return { success: false, message: 'Ollama service not responding', url: this.baseUrl };
+    } catch (_) {}
+
+    try {
+      const response = await this.request('/api/tags', { method: 'GET' }, 5000);
+      diagnostics.status_code = response.status;
+      diagnostics.models_found = response.data?.models?.length || 0;
+
+      if (response.ok && response.data?.models?.length > 0) {
+        diagnostics.available = true;
+        this._setAvailable(true);
+        return { success: true, message: `Connected to Ollama (${model})`, url, diagnostics };
+      }
+      diagnostics.available = false;
+      return { success: false, message: 'Ollama responded but no models found', url, diagnostics };
     } catch (error) {
-      return { success: false, message: error.message, url: this.baseUrl };
+      diagnostics.available = false;
+      diagnostics.error = error.message;
+      return { success: false, message: error.message, url, diagnostics };
     }
   }
 }
