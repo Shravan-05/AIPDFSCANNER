@@ -29,11 +29,15 @@ services:
       - key: OLLAMA_MODEL
         value: llama3.2:1b
 
+  # ── Ollama AI Private Service ──────────────────────────────────
+  # NOTE: Requires at least Render "Professional" plan (4GB RAM).
+  # The llama3.2:1b model needs ~1.3GB RAM just to load.
+  # On "Starter" (512MB), the container will be OOM-killed.
+  # Fallback: the web service auto-degrades to the rule-based parser.
   - type: private
     name: ollama
     env: docker
     dockerfilePath: ./ollama.Dockerfile
-    plan: starter
     autoDeploy: true
     disks:
       - name: ollama-models

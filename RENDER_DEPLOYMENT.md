@@ -4,14 +4,24 @@ This repo is ready to deploy as a **Render Blueprint** with two connected servic
 1. **aipdfscanner** — Node web service (Express API + React frontend)
 2. **ollama** — Private Docker service running Ollama with `llama3.2:1b`
 
+## Plan Requirements
+
+| Service | Min Plan | RAM | Why |
+|---|---|---|---|
+| aipdfscanner | Starter (free) | 512MB | Node + sharp + tesseract |
+| ollama | **Professional ($20/mo)** | **4GB** | `llama3.2:1b` needs ~1.3GB RAM to load |
+
+On the free Starter plan, Ollama will be **OOM-killed**. The app still works — it gracefully falls back to the built-in rule-based command parser for all basic operations (compress, delete, rotate, watermark, etc.).
+
 ## One-Click Blueprint Deploy
 
 1. Push this repo to GitHub/GitLab
 2. In Render Dashboard → Blueprint → Connect your repo
-3. Render auto-detects `render.yaml` and creates both services
+3. Render auto-detects `render.yaml` and prompts for settings
 4. Fill in the required env vars when prompted:
    - `MONGODB_URI` — MongoDB Atlas connection string
    - `JWT_SECRET` — strong random secret
+5. **Upgrade the Ollama service to Professional plan** in the Render dashboard if you want AI features
 
 ## How the services communicate
 
