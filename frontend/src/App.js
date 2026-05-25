@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -47,10 +47,17 @@ const AppLayout = ({ children }) => {
   const { user, token, loading } = useAuth();
   const location = useLocation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const authPaths = ['/', '/login', '/register', '/forgot-password'];
   const isSharePage = location.pathname.startsWith('/share/');
   const isAuthPage = authPaths.includes(location.pathname) || isSharePage;
   const shouldShowShell = !isAuthPage && (user || (token && loading));
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   if (isAuthPage) return children;
 
@@ -59,7 +66,7 @@ const AppLayout = ({ children }) => {
       {shouldShowShell && <Sidebar mobileOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {shouldShowShell && <Navbar onToggleSidebar={() => setMobileSidebarOpen(o => !o)} />}
-        <main style={{ flex: 1, padding: shouldShowShell ? '24px' : 0, minWidth: 0 }}>
+        <main style={{ flex: 1, padding: shouldShowShell ? (isMobile ? '0' : '24px') : 0, minWidth: 0 }}>
           <Suspense fallback={<PageLoader />}>
             {children}
           </Suspense>

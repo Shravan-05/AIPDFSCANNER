@@ -215,10 +215,7 @@ const FilesPage = () => {
       {/* Filters */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
         <SearchBar value={search} onChange={setSearch} placeholder="Search files..." style={{ flex: '1 1 100%' }} />
-        <select className="input" value={sort} onChange={(e) => setSort(e.target.value)} style={{
-          '@media (min-width: 480px)': { width: 'auto' },
-          width: '100%'
-        }}>
+        <select className="input sort-select" value={sort} onChange={(e) => setSort(e.target.value)}>
           <option value="-createdAt">Newest First</option>
           <option value="createdAt">Oldest First</option>
           <option value="title">Name A-Z</option>

@@ -49,11 +49,11 @@ const SortableItem = ({ id, fileObj, onRemove }) => {
       <div {...attributes} {...listeners}
         style={{
           cursor: 'grab', color: 'var(--text-tertiary)',
-          display: 'flex', alignItems: 'center',
-          padding: isMobile ? '8px' : '0', touchAction: 'none',
-          minHeight: 40
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: isMobile ? '10px' : '0', touchAction: 'none',
+          minHeight: isMobile ? 48 : 40, minWidth: isMobile ? 48 : 40
         }}>
-        <GripVertical size={isMobile ? 24 : 20} />
+        <GripVertical size={24} />
       </div>
       
       {fileObj.thumbnail ? (

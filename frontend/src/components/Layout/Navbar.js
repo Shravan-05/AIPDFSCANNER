@@ -33,8 +33,8 @@ const Navbar = ({ onToggleSidebar }) => {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         {isMobile && (
-          <button onClick={onToggleSidebar} className="btn btn-ghost btn-sm" style={{ padding: 8 }} title="Toggle sidebar">
-            <Menu size={20} />
+          <button onClick={onToggleSidebar} className="btn btn-ghost btn-sm" style={{ padding: 10, minWidth: 44, minHeight: 44 }} title="Toggle sidebar" aria-label="Toggle sidebar">
+            <Menu size={22} />
           </button>
         )}
       </div>

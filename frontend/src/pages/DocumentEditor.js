@@ -295,7 +295,7 @@ const DocumentEditor = () => {
           <div style={{ flex: 1 }}>
             <div className="skeleton" style={{ width: 260, height: 32, marginBottom: 20 }} />
             <div className="skeleton" style={{ width: '100%', height: 100, marginBottom: 20, borderRadius: 'var(--radius-md)' }} />
-            <div className="skeleton" style={{ width: '100%', height: 480, borderRadius: 'var(--radius-lg)' }} />
+            <div className="skeleton" style={{ width: '100%', height: 'min(480px, 50vh)', borderRadius: 'var(--radius-lg)' }} />
           </div>
           <div style={{ width: 260 }}>
             <div className="skeleton" style={{ width: '100%', height: 400, borderRadius: 'var(--radius-lg)' }} />
@@ -453,7 +453,7 @@ const DocumentEditor = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 18 }}>
 
         {/* Image preview */}
-        <div className="glass-card" style={{ padding: 0, overflow: 'hidden', position: 'relative', minHeight: 480 }}>
+        <div className="glass-card" style={{ padding: 0, overflow: 'hidden', position: 'relative', minHeight: 'min(480px, 50vh)' }}>
           {currentImage ? (
             <>
               {applyingEnhancement && (

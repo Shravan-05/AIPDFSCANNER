@@ -38,7 +38,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirstWithTimeout(request, 5000));
+    event.respondWith(networkFirstWithTimeout(request, 15000));
     return;
   }
 

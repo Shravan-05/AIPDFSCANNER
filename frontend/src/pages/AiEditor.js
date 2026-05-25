@@ -1029,7 +1029,7 @@ const AiEditor = () => {
           borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)',
           background: 'rgba(20, 20, 35, 0.85)', backdropFilter: 'blur(20px)',
           boxShadow: 'var(--shadow-lg)', animation: 'slideRight 0.3s ease',
-          ...(isMobile ? { maxHeight: '40vh', minHeight: 280 } : {})
+          ...(isMobile ? { maxHeight: '45vh', minHeight: 200 } : {})
         }}>
 
           {/* Sidebar Header */}
