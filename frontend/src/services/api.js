@@ -47,12 +47,10 @@ export const authAPI = {
 
 export const scansAPI = {
   create: (formData, onProgress) => api.post('/scans', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: onProgress,
     timeout: 120000
   }),
   addPages: (id, formData, onProgress) => api.post(`/scans/${id}/pages`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: onProgress,
     timeout: 120000
   }),
@@ -71,9 +69,7 @@ export const scansAPI = {
   getStats: () => api.get('/scans/stats'),
   merge: (scanIds, title) => api.post('/scans/merge', { scanIds, title }, { timeout: 120000 }),
   split: (id) => api.post(`/scans/${id}/split`),
-  annotate: (id, pageId, formData) => api.post(`/scans/${id}/pages/${pageId}/annotate`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
+  annotate: (id, pageId, formData) => api.post(`/scans/${id}/pages/${pageId}/annotate`, formData)
 };
 
 export const filesAPI = {
