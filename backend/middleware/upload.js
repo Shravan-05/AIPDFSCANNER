@@ -12,7 +12,6 @@ const storage = multer.diskStorage({
   }
 });
 
-// Support ALL image formats - comprehensive list
 const fileFilter = (req, file, cb) => {
   const allImageExtensions = [
     'jpeg', 'jpg', 'png', 'gif', 'bmp', 'tiff', 'tif', 'webp', 'svg', 'svgz',
@@ -40,7 +39,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024
+    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 50 * 1024 * 1024
   },
   fileFilter
 });

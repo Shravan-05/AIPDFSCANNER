@@ -173,22 +173,27 @@ const MergePDF = () => {
         setProgress(Math.round((e.loaded / e.total) * 100));
       });
       
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Merged_${new Date().getTime()}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      // Handle new JSON response format with download URL
+      if (res.data.success && res.data.downloadUrl) {
+        const downloadUrl = res.data.downloadUrl;
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.setAttribute('download', res.data.filename || `Merged_${new Date().getTime()}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        showToast.success("PDFs merged successfully!");
+      } else {
+        showToast.error("Invalid response from server");
+      }
       
-      showToast.success("PDFs merged successfully!");
       setFiles([]);
     } catch (err) {
       console.error(err);
-      showToast.error("Failed to merge PDFs.");
+      showToast.error(err.message || "Failed to merge PDFs.");
     } finally {
       setMerging(false);
+      setProgress(0);
     }
   };
 
@@ -250,12 +255,12 @@ const MergePDF = () => {
               {merging ? (
                 <>
                   <Loader size={20} className="spin" />
-                  Merging {progress}%...
+                  Merging... {progress}%
                 </>
               ) : (
                 <>
                   <FileDown size={20} />
-                  Merge PDF
+                  Merge PDFs
                 </>
               )}
             </button>

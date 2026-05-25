@@ -2,16 +2,19 @@ import api from './api';
 
 const pdfToolsAPI = {
   merge: (formData, onProgress) => api.post('/pdf/merge', formData, {
-    headers: { 'Content-Type': undefined },
+    headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: onProgress,
-    responseType: 'blob'
+    timeout: 180000,
+    responseType: 'json'
   }),
   aiEdit: (formData, onProgress) => api.post('/pdf/ai-edit', formData, {
-    headers: { 'Content-Type': undefined },
-    onUploadProgress: onProgress
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: onProgress,
+    timeout: 120000
   }),
   analyze: (formData) => api.post('/pdf/analyze', formData, {
-    headers: { 'Content-Type': undefined }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000
   }),
   getJobStatus: (id) => api.get(`/pdf/job/${id}`),
   

@@ -5,8 +5,12 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 15000
+  timeout: 120000
 });
+
+// Retry logic for failed requests
+let retryCount = 0;
+const MAX_RETRIES = 2;
 
 api.interceptors.request.use(
   (config) => {
@@ -14,6 +18,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    config.retryCount = 0;
     return config;
   },
   (error) => Promise.reject(error)
@@ -21,10 +26,21 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config;
+    
     if (error.code === 'ECONNABORTED') {
       return Promise.reject(new Error('Request timed out. Please check your connection.'));
     }
+    
+    // Retry on network errors or 5xx status codes (except on GET with blob response)
+    if ((error.message === 'Network Error' || (error.response?.status >= 500 && error.response?.status < 600)) && 
+        config && config.retryCount < MAX_RETRIES && config.method !== 'get') {
+      config.retryCount += 1;
+      await new Promise(resolve => setTimeout(resolve, 1000 * config.retryCount));
+      return api(config);
+    }
+    
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('auth_cache');
@@ -47,14 +63,14 @@ export const authAPI = {
 
 export const scansAPI = {
   create: (formData, onProgress) => api.post('/scans', formData, {
-    headers: { 'Content-Type': undefined },
+    headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: onProgress,
-    timeout: 120000
+    timeout: 180000
   }),
   addPages: (id, formData, onProgress) => api.post(`/scans/${id}/pages`, formData, {
-    headers: { 'Content-Type': undefined },
+    headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: onProgress,
-    timeout: 120000
+    timeout: 180000
   }),
   getAll: (params) => api.get('/scans', { params }),
   getOne: (id) => api.get(`/scans/${id}`),
@@ -72,7 +88,7 @@ export const scansAPI = {
   merge: (scanIds, title) => api.post('/scans/merge', { scanIds, title }, { timeout: 120000 }),
   split: (id) => api.post(`/scans/${id}/split`),
   annotate: (id, pageId, formData) => api.post(`/scans/${id}/pages/${pageId}/annotate`, formData, {
-    headers: { 'Content-Type': undefined }
+    headers: { 'Content-Type': 'multipart/form-data' }
   })
 };
 
