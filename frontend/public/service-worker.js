@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aurascan-v1';
+const CACHE_NAME = 'aurascan-v2';
 
 const STATIC_ASSETS = [
   '/',
@@ -42,12 +42,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (url.pathname.startsWith('/uploads/')) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
   if (
-    url.pathname.startsWith('/uploads/') ||
     url.pathname.startsWith('/static/') ||
     url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?)$/)
   ) {
-    event.respondWith(cacheFirst(request));
+    event.respondWith(networkFirst(request));
     return;
   }
 
@@ -58,21 +62,6 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(networkFirst(request));
 });
-
-async function cacheFirst(request) {
-  const cached = await caches.match(request);
-  if (cached) return cached;
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch {
-    return new Response('Offline', { status: 503 });
-  }
-}
 
 async function networkFirst(request) {
   try {
