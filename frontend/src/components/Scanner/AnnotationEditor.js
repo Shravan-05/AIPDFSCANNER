@@ -8,21 +8,27 @@ const AnnotationEditor = ({ imageUrl, onSave, onCancel }) => {
   const [image] = useImage(imageUrl);
   const stageRef = useRef(null);
 
-  const [tool, setTool] = useState('highlight'); // 'highlight', 'eraser', 'text'
+  const [tool, setTool] = useState('highlight');
   const [lines, setLines] = useState([]);
   const [texts, setTexts] = useState([]);
   const [selectedTextIndex, setSelectedTextIndex] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  // Fit stage to screen
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
     if (image) {
-      // Scale down image to fit in reasonable window size
-      const maxW = window.innerWidth * 0.8;
-      const maxH = window.innerHeight * 0.7;
+      const maxW = window.innerWidth * (isMobile ? 0.95 : 0.8);
+      const maxH = window.innerHeight * (isMobile ? 0.6 : 0.7);
       let s = 1;
       if (image.width > maxW || image.height > maxH) {
         s = Math.min(maxW / image.width, maxH / image.height);
@@ -30,7 +36,7 @@ const AnnotationEditor = ({ imageUrl, onSave, onCancel }) => {
       setScale(s);
       setStageSize({ width: image.width * s, height: image.height * s });
     }
-  }, [image]);
+  }, [image, isMobile]);
 
   const handleMouseDown = (e) => {
     const clickedOnEmpty = e.target === e.target.getStage() || e.target.id() === 'baseImage';
@@ -128,32 +134,32 @@ const AnnotationEditor = ({ imageUrl, onSave, onCancel }) => {
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           <button className={`btn btn-sm ${tool === 'highlight' ? 'btn-primary' : 'btn-ghost'}`}
             onClick={() => setTool('highlight')}
-            style={{ padding: '6px 10px', fontSize: 12 }}>
-            <Highlighter size={14} /> <span className="hide-mobile">Highlight</span>
+            style={{ padding: '6px 10px', fontSize: 12, minHeight: isMobile ? 44 : 32, minWidth: isMobile ? 44 : 32 }}>
+            <Highlighter size={14} /> {!isMobile && <span>Highlight</span>}
           </button>
           <button className={`btn btn-sm ${tool === 'eraser' ? 'btn-primary' : 'btn-ghost'}`}
             onClick={() => setTool('eraser')}
-            style={{ padding: '6px 10px', fontSize: 12 }}>
-            <Eraser size={14} /> <span className="hide-mobile">Whiteout</span>
+            style={{ padding: '6px 10px', fontSize: 12, minHeight: isMobile ? 44 : 32, minWidth: isMobile ? 44 : 32 }}>
+            <Eraser size={14} /> {!isMobile && <span>Whiteout</span>}
           </button>
           <button className={`btn btn-sm ${tool === 'text' ? 'btn-primary' : 'btn-ghost'}`}
             onClick={() => setTool('text')}
-            style={{ padding: '6px 10px', fontSize: 12 }}>
-            <Type size={14} /> <span className="hide-mobile">Text</span>
+            style={{ padding: '6px 10px', fontSize: 12, minHeight: isMobile ? 44 : 32, minWidth: isMobile ? 44 : 32 }}>
+            <Type size={14} /> {!isMobile && <span>Text</span>}
           </button>
           <button className="btn btn-sm btn-ghost" onClick={undo} title="Undo last action"
-            style={{ padding: '6px 10px', fontSize: 12 }}>
-            <Undo size={14} /> <span className="hide-mobile">Undo</span>
+            style={{ padding: '6px 10px', fontSize: 12, minHeight: isMobile ? 44 : 32, minWidth: isMobile ? 44 : 32 }}>
+            <Undo size={14} /> {!isMobile && <span>Undo</span>}
           </button>
         </div>
 
         <div style={{ display: 'flex', gap: 6 }}>
           <button className="btn btn-ghost btn-sm" onClick={onCancel}
-            style={{ padding: '6px 10px', fontSize: 12 }}>
-            <X size={14} /> <span className="hide-mobile">Cancel</span>
+            style={{ padding: '6px 10px', fontSize: 12, minHeight: isMobile ? 44 : 32 }}>
+            <X size={14} /> {!isMobile && <span>Cancel</span>}
           </button>
           <button className="btn btn-primary btn-sm" onClick={handleSave}
-            style={{ padding: '6px 12px', fontSize: 12 }}>
+            style={{ padding: '6px 12px', fontSize: 12, minHeight: isMobile ? 44 : 32 }}>
             <Check size={14} /> Save
           </button>
         </div>

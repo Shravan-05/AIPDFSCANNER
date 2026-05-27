@@ -200,10 +200,14 @@ a:hover {
 
 .spin {
   animation: spin 0.8s linear infinite;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .spin-slow {
   animation: spinSlow 3s linear infinite;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .pulse {
@@ -354,7 +358,13 @@ a:hover {
   }
 
   .fade-in, .slide-up, .scale-in {
-    animation-duration: 0.2s;
+    animation-duration: 0.15s;
+  }
+  .timeline-item:nth-child(n+3) {
+    animation-delay: 0s !important;
+  }
+  canvas, img {
+    will-change: auto;
   }
 }
 
@@ -561,19 +571,22 @@ a:hover {
 
 @keyframes micPulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4), 0 0 0 0 rgba(139, 92, 246, 0.4);
+    transform: scale(1);
+    opacity: 1;
   }
   70% {
-    box-shadow: 0 0 0 12px rgba(99, 102, 241, 0), 0 0 0 20px rgba(139, 92, 246, 0);
+    transform: scale(1.2);
+    opacity: 0.1;
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0), 0 0 0 0 rgba(139, 92, 246, 0);
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
 @keyframes waveBar {
-  0%, 100% { height: 6px; }
-  50% { height: 24px; }
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
 }
 
 .mic-active {
@@ -596,6 +609,8 @@ a:hover {
   background: var(--accent-primary);
   border-radius: var(--radius-full);
   animation: waveBar 1.2s ease-in-out infinite;
+  will-change: transform;
+  transform-origin: center;
 }
 
 .waveform-bar:nth-child(2) {
@@ -676,6 +691,46 @@ a:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 24px rgba(99, 102, 241, 0.15);
   }
+}
+
+/* Image Optimization */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Page Thumbnails - Fix CLS */
+[data-thumb-index] {
+  aspect-ratio: 110 / 140;
+}
+
+[data-thumb-index] img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* File Card Thumbnail - Fix CLS */
+.file-card-thumbnail {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-card-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* PDF Page Canvas */
+canvas[data-page-number] {
+  max-width: 100%;
+  height: auto;
 }
 
 /* ---------------------------------------------------------------------------

@@ -9,7 +9,6 @@ const api = axios.create({
 });
 
 // Retry logic for failed requests
-let retryCount = 0;
 const MAX_RETRIES = 2;
 
 api.interceptors.request.use(

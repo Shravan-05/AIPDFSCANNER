@@ -176,7 +176,7 @@ const FilesPage = () => {
   const selectedFiles = files.filter(f => selected.has(f.id));
 
   return (
-    <div className="page-container" style={{ maxWidth: 1300, paddingBottom: selected.size > 0 ? 100 : 24 }}>
+    <div className="page-container" style={{ maxWidth: 1300, paddingBottom: selected.size > 0 ? 120 : 24 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
         <div>
@@ -274,25 +274,26 @@ const FilesPage = () => {
         <div style={{
           position: 'fixed', bottom: 16, left: 12, right: 12,
           zIndex: 200, display: 'flex', alignItems: 'center', gap: 8,
-          padding: '10px 14px',
+          padding: '12px 16px',
           background: 'var(--bg-secondary)',
           WebkitBackdropFilter: 'blur(24px)', backdropFilter: 'blur(24px)',
           border: '1px solid var(--border-color)',
           borderRadius: 'var(--radius-lg)',
           boxShadow: '0 8px 40px rgba(0,0,0,0.3)',
           animation: 'slideUp 200ms ease-out',
-          overflowX: 'auto'
+          overflowX: 'auto',
+          flexWrap: 'wrap'
         }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', paddingRight: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {selected.size}
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', paddingRight: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {selected.size} selected
           </span>
           {selected.size >= 2 && (
             <button
               className="btn btn-primary btn-sm"
               onClick={() => setShowMergeModal(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0, minHeight: 40, padding: '8px 16px' }}
             >
-              <Merge size={15} /> Merge
+              <Merge size={16} /> Merge
             </button>
           )}
           <button
@@ -301,17 +302,17 @@ const FilesPage = () => {
             style={{
               display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0,
               background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)',
-              color: 'var(--error)'
+              color: 'var(--error)', minHeight: 40, padding: '8px 16px'
             }}
           >
-            <Trash2 size={15} /> Delete
+            <Trash2 size={16} /> Delete
           </button>
           <button
             className="btn btn-ghost btn-sm"
             onClick={clearSelection}
-            style={{ flexShrink: 0 }}
+            style={{ flexShrink: 0, minHeight: 40, minWidth: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <X size={15} />
+            <X size={18} />
           </button>
         </div>
       )}

@@ -6,7 +6,7 @@ import { showToast } from '../components/UI/Toast';
 import {
   Sun, Moon, Monitor, Save, Cloud, Globe, Zap,
   CheckCircle, XCircle, Loader, ChevronDown, ChevronUp,
-  HardDrive, Database, Lock, Eye, EyeOff
+  HardDrive, Database, Lock, Eye, EyeOff, Bot
 } from 'lucide-react';
 
 const PROVIDERS = [
@@ -54,7 +54,7 @@ const SettingsPage = () => {
   const [testResult, setTestResult] = useState(null);
   const [showSecrets, setShowSecrets] = useState({});
   const [expandedSections, setExpandedSections] = useState({
-    appearance: true, scan: true, ocr: true, cloud: true, account: true
+    appearance: true, scan: true, ocr: true, cloud: true, ollama: true, account: true
   });
 
   useEffect(() => { loadSettings(); }, []);
@@ -484,6 +484,38 @@ const SettingsPage = () => {
                   )}
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Ollama AI */}
+        <div className="glass-card">
+          <SectionHeader title="Ollama AI Agent" icon={Bot} sectionKey="ollama" description="Natural language PDF command engine" />
+          {expandedSections.ollama && (
+            <div>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
+                Ollama powers the AI Document Agent in the AI Editor. It parses natural language commands into PDF actions.
+                Install from <a href="https://ollama.ai" target="_blank" rel="noopener noreferrer">ollama.ai</a> and run <code>ollama pull llama2</code>.
+              </p>
+              <button
+                className="btn btn-secondary"
+                onClick={async () => {
+                  try {
+                    const api = (await import('../services/api')).default;
+                    const res = await api.get('/pdf/ollama/test');
+                    if (res.data.success) {
+                      showToast.success(res.data.message);
+                    } else {
+                      showToast.error(res.data.message || 'Ollama unavailable');
+                    }
+                  } catch {
+                    showToast.error('Ollama connection failed. Ensure Ollama is running.');
+                  }
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                <Zap size={16} /> Test Ollama Connection
+              </button>
             </div>
           )}
         </div>

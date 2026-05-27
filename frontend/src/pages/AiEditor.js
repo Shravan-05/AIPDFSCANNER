@@ -9,6 +9,7 @@ import PdfPreview from '../components/UI/PdfPreview';
 import pdfToolsAPI from '../services/pdfToolsAPI';
 import { filesAPI } from '../services/api';
 import { showToast } from '../components/UI/Toast';
+import api from '../services/api';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const SUGGESTIONS = [
@@ -203,6 +204,28 @@ const AiEditor = () => {
   const inputRef        = useRef(null);
   const pollingRef      = useRef(null);
   const objectUrlsRef   = useRef([]);
+
+  // Check Ollama connection status on mount
+  useEffect(() => {
+    const checkOllama = async () => {
+      try {
+        const { data } = await api.get('/health');
+        const dot = document.getElementById('ollama-status-dot');
+        if (dot) {
+          const isAvailable = data?.ollama?.available;
+          dot.style.background = isAvailable ? '#10b981' : '#f59e0b';
+          dot.title = isAvailable ? 'Ollama connected' : 'Ollama unavailable (using fallback)';
+        }
+      } catch {
+        const dot = document.getElementById('ollama-status-dot');
+        if (dot) {
+          dot.style.background = '#ef4444';
+          dot.title = 'Ollama connection check failed';
+        }
+      }
+    };
+    checkOllama();
+  }, []);
 
   // ── Scroll to bottom ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -566,7 +589,7 @@ const AiEditor = () => {
         addAIMessage(`Job status unavailable: ${statusMsg}`, 'ERROR', 0);
         speak('I could not read the job status. Please try the command again.');
       }
-    }, 800);
+    }, 2000);
   };
 
   // ── Core Submit Handler ───────────────────────────────────────────────────────
@@ -1029,7 +1052,7 @@ const AiEditor = () => {
           borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)',
           background: 'rgba(20, 20, 35, 0.85)', backdropFilter: 'blur(20px)',
           boxShadow: 'var(--shadow-lg)', animation: 'slideRight 0.3s ease',
-          ...(isMobile ? { maxHeight: '45vh', minHeight: 200 } : {})
+          ...(isMobile ? { maxHeight: '50vh', minHeight: 220, flex: '0 0 auto' } : {})
         }}>
 
           {/* Sidebar Header */}
@@ -1048,7 +1071,7 @@ const AiEditor = () => {
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: '#fff' }}>AI Document Agent</p>
                 <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                  <span id="ollama-status-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
                   Local NLP Engine · Voice Active
                 </p>
               </div>

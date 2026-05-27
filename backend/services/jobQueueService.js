@@ -34,6 +34,25 @@ class JobQueueService {
     } catch (err) {
       console.error('[JobQueue] Failed to clean up stale jobs:', err.message);
     }
+
+    this._schedulePeriodicCleanup();
+  }
+
+  _schedulePeriodicCleanup() {
+    setInterval(async () => {
+      try {
+        const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const result = await Job.deleteMany({
+          status: { $in: ['completed', 'failed'] },
+          createdAt: { $lt: cutoff }
+        });
+        if (result.deletedCount > 0) {
+          console.log(`[JobQueue] Cleaned up ${result.deletedCount} old job(s) older than 7 days`);
+        }
+      } catch (err) {
+        console.error('[JobQueue] Periodic cleanup error:', err.message);
+      }
+    }, 24 * 60 * 60 * 1000);
   }
 
   async _ensureReady() {

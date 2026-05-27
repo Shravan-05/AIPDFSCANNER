@@ -84,10 +84,8 @@ const FileCard = ({
       </button>
 
       {/* Thumbnail Area */}
-      <div style={{
+      <div className="file-card-thumbnail" style={{
         height: 150,
-        background: 'linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
         position: 'relative', overflow: 'hidden'
       }}>
         {thumbnailUrl && !imgErr ? (

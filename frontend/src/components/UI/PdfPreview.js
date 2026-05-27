@@ -2,7 +2,14 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf';
 import { ChevronLeft, ChevronRight, Download, Loader, AlertCircle } from 'lucide-react';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.7.284/build/pdf.worker.min.mjs`;
+const workerSrc = (() => {
+  try {
+    return new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href;
+  } catch {
+    return `https://unpkg.com/pdfjs-dist@5.7.284/build/pdf.worker.min.mjs`;
+  }
+})();
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 const PdfPreview = ({ url, file, fileName }) => {
   const canvasRef = useRef(null);
