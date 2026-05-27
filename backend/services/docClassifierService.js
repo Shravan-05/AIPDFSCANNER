@@ -1,34 +1,14 @@
-const { PDFDocument } = require('pdf-lib');
+const pdfParse = require('pdf-parse');
 
 class DocClassifierService {
-  /**
-   * Extracts sample text from the first few pages of a PDF buffer
-   */
   async extractSampleText(pdfBuffer) {
-    let text = '';
     try {
-      const pdfDoc = await PDFDocument.load(pdfBuffer);
-      const pages = pdfDoc.getPages();
-      const pagesToScan = pages.slice(0, 3); // Check first 3 pages
-
-      for (const page of pagesToScan) {
-        const streams = page.node.getContents();
-        if (!streams) continue;
-        for (const s of streams) {
-          if (!s || !s.contents) continue;
-          const streamText = s.contents.toString();
-          
-          // Regex to extract text blocks enclosed in parenthesis (e.g., (Sample Text) Tj)
-          const matches = streamText.match(/\(([^)]+)\)/g);
-          if (matches) {
-            text += ' ' + matches.map(m => m.slice(1, -1)).join(' ');
-          }
-        }
-      }
+      const data = await pdfParse(pdfBuffer);
+      return data.text.substring(0, 3000).toLowerCase();
     } catch (err) {
       console.error('Error extracting sample text for classification:', err);
+      return '';
     }
-    return text.toLowerCase();
   }
 
   /**
