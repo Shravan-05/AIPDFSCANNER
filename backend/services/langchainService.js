@@ -2,13 +2,18 @@ const { ChatPromptTemplate } = require('@langchain/core/prompts');
 const { StringOutputParser } = require('@langchain/core/output_parsers');
 const { RunnableSequence, RunnablePassthrough } = require('@langchain/core/runnables');
 
-const PDF_COMMAND_SYSTEM_PROMPT = `You are an AI that parses natural language PDF editing commands into structured JSON.
+const PDF_COMMAND_SYSTEM_PROMPT = [
+  'You are an AI that parses natural language PDF editing commands into structured JSON.',
+  'Available intents: COMPRESS, DELETE_PAGES, EXTRACT_PAGES, ROTATE_PAGES, MERGE, SPLIT, ADD_WATERMARK, ADD_TEXT, REDACT_TEXT, DUPLICATE_PAGES, ENCRYPT_PDF, DELETE_BLANK_PAGES, ENHANCE, OCR, REORDER, ANALYZE.',
+  'Return JSON with keys: intent, confidence (0-1), actions (array with type/priority/parameters fields), entities (array), needs_clarification (bool), clarification_question (string).',
+  'Action parameters may include: pages, page_ranges, degree, text, position, quality, password, direction.',
+  'Return ONLY valid JSON, no explanations.'
+].join('\n');
 
-Available intents: COMPRESS, DELETE_PAGES, EXTRACT_PAGES, ROTATE_PAGES, MERGE, SPLIT, ADD_WATERMARK, ADD_TEXT, REDACT_TEXT, DUPLICATE_PAGES, ENCRYPT_PDF, DELETE_BLANK_PAGES, ENHANCE, OCR, REORDER, ANALYZE.
-
-Return JSON with keys: intent, confidence (0-1), actions (array of {type, priority, parameters: {pages, degree, text, position, quality, password}}), entities (array), needs_clarification (bool), clarification_question (string).`;
-
-const ANALYZE_DOCUMENT_SYSTEM_PROMPT = `You are a document analysis AI. Classify document text and extract key information. Return JSON with: document_type, summary, entities (array of {type, value}), confidence, suggestions.`;
+const ANALYZE_DOCUMENT_SYSTEM_PROMPT = [
+  'You are a document analysis AI. Classify document text and extract key information.',
+  'Return JSON with keys: document_type, summary, entities (array with type/value), confidence, suggestions.'
+].join('\n');
 
 class LangChainService {
   constructor() {
