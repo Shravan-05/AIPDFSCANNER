@@ -51,10 +51,8 @@ class LangChainService {
 
       this._buildChains();
       this._available = true;
-      console.log(`[LangChain] Initialized with ${provider}/${model}`);
-    } catch (err) {
+    } catch {
       this._available = false;
-      console.log(`[LangChain] Not available (${err.message}), using fallback parser`);
     }
   }
 
@@ -100,10 +98,7 @@ class LangChainService {
   async warmup() {
     if (!this._available) return;
     const ok = await this._testConnection();
-    if (!ok) {
-      this._available = false;
-      console.log('[LangChain] Backend unreachable, disabled until restart');
-    }
+    if (!ok) this._available = false;
   }
 
   extractJson(text) {
