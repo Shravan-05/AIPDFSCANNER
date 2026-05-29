@@ -134,7 +134,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 
     // Initialize LangChain service (non-blocking — works without Ollama too)
     const langchain = require('./services/langchainService');
-    langchain.initialize().catch(() => {});
+    langchain.initialize().then(() => langchain.warmup()).catch(() => {});
 
     const server = app.listen(PORT, () => {
       console.log(`AuraScan AI server running on port ${PORT} (${NODE_ENV})`);

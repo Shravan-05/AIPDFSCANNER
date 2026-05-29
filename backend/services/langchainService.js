@@ -86,6 +86,26 @@ class LangChainService {
     return this._available;
   }
 
+  async _testConnection() {
+    try {
+      const response = await fetch(`${process.env.OLLAMA_API_URL || 'http://localhost:11434'}/api/tags`, {
+        signal: AbortSignal.timeout(5000)
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async warmup() {
+    if (!this._available) return;
+    const ok = await this._testConnection();
+    if (!ok) {
+      this._available = false;
+      console.log('[LangChain] Backend unreachable, disabled until restart');
+    }
+  }
+
   extractJson(text) {
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return null;
@@ -112,7 +132,9 @@ class LangChainService {
         context: JSON.stringify(context),
       });
       return this.extractJson(raw);
-    } catch {
+    } catch (err) {
+      this._available = false;
+      console.log(`[LangChain] LLM call failed (${err.message}), disabled for this session`);
       return null;
     }
   }
@@ -124,7 +146,9 @@ class LangChainService {
         text: text.substring(0, maxLength),
       });
       return this.extractJson(raw);
-    } catch {
+    } catch (err) {
+      this._available = false;
+      console.log(`[LangChain] LLM call failed (${err.message}), disabled for this session`);
       return null;
     }
   }

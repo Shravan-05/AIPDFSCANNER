@@ -126,12 +126,8 @@ exports.aiEdit = async (req, res) => {
 
     // Quick intent match for very clear commands
     const quickMatch = nlpEnhancer.quickIntentMatch(command);
-    if (quickMatch && quickMatch.confidence >= 0.90) {
-      // Build quick action and proceed
-      console.log(`[Quick Match] ${command} ΓåÆ ${quickMatch.intent} (${quickMatch.confidence})`);
-    }
 
-    // 1. Parse natural language into JSON actions using Ollama AI
+    // 1. Parse natural language into JSON actions
     let parseResult;
     
     if (cachedResult && cachedResult.confidence >= 0.85) {
@@ -142,13 +138,7 @@ exports.aiEdit = async (req, res) => {
         documentType: docInfo.documentType || 'document'
       });
 
-      if (ollamaResult.confidence >= 0.6) {
-        parseResult = ollamaResult;
-        console.log(`[Ollama] Parsed command with ${ollamaResult.confidence} confidence, source: ${ollamaResult.source}`);
-      } else {
-        parseResult = ollamaResult;
-        console.log(`[Ollama] Low confidence (${ollamaResult.confidence}), using result as-is (source: ${ollamaResult.source})`);
-      }
+      parseResult = ollamaResult;
     }
     parseResult.original_input = command;
     parseResult.input_mode = inputMode;

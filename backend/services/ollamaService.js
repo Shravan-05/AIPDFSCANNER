@@ -427,9 +427,11 @@ class OllamaService {
         });
         const aiData = await aiResp.json().catch(() => ({}));
         diagnostics.ai_service = { status: aiResp.status, ok: aiResp.ok, data: aiData };
-      } catch (err) {
-        diagnostics.ai_service = { error: err.message };
-      }
+    } catch {
+      this._aiServiceAvailable = false;
+      this._aiServiceLastCheck = Date.now();
+      return false;
+    }
     } else {
       diagnostics.ai_service = { note: 'AI_SERVICE_URL not configured' };
     }
