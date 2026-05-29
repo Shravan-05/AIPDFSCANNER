@@ -136,16 +136,25 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your_jwt_secret_key_h
   process.exit(1);
 }
 
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 
 async function startOllama() {
   const ollamaBin = process.env.OLLAMA_BIN || 'ollama';
+
+  // Download Ollama if missing
   try {
-    const { execSync } = require('child_process');
     execSync(`${ollamaBin} --version`, { stdio: 'ignore' });
   } catch {
-    console.log('Ollama binary not found, skipping startup');
-    return;
+    console.log('Downloading Ollama...');
+    try {
+      execSync('curl -fsSL https://ollama.com/download/ollama-linux-amd64.tgz -o /tmp/ollama.tgz', { stdio: 'pipe' });
+      execSync('tar -C /usr/local -xzf /tmp/ollama.tgz', { stdio: 'pipe' });
+      execSync('rm /tmp/ollama.tgz', { stdio: 'pipe' });
+      console.log('Ollama downloaded');
+    } catch (e) {
+      console.log(`Ollama download failed: ${e.message}, skipping`);
+      return;
+    }
   }
 
   const proc = spawn(ollamaBin, ['serve'], {
