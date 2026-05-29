@@ -9,7 +9,7 @@ class OllamaService {
     this.aiServiceToken = process.env.AI_SERVICE_API_TOKEN || '';
     this._aiServiceAvailable = null;
     this._aiServiceLastCheck = 0;
-    this._skipOllama = this.baseUrl.includes('ollama:11434') && !process.env.OLLAMA_DEPLOYED;
+    this._skipOllama = process.env.OLLAMA_DEPLOYED !== 'true' && this.baseUrl.includes('localhost');
     // LangChain service loaded lazily
     this._langchain = null;
   }
