@@ -136,6 +136,45 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your_jwt_secret_key_h
   process.exit(1);
 }
 
+const { spawn } = require('child_process');
+
+async function startOllama() {
+  const ollamaBin = process.env.OLLAMA_BIN || 'ollama';
+  try {
+    const { execSync } = require('child_process');
+    execSync(`${ollamaBin} --version`, { stdio: 'ignore' });
+  } catch {
+    console.log('Ollama binary not found, skipping startup');
+    return;
+  }
+
+  const proc = spawn(ollamaBin, ['serve'], {
+    env: { ...process.env, OLLAMA_HOST: '0.0.0.0', OLLAMA_KEEP_ALIVE: '24h' },
+    stdio: 'pipe',
+  });
+  proc.stdout.on('data', d => process.stdout.write(`[ollama] ${d}`));
+  proc.stderr.on('data', d => process.stderr.write(`[ollama] ${d}`));
+  proc.on('exit', code => console.log(`[ollama] exited with code ${code}`));
+
+  // Wait for Ollama to respond
+  for (let i = 0; i < 60; i++) {
+    try {
+      const resp = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(3000) });
+      if (resp.ok) {
+        console.log('[ollama] ready');
+        // Pull model in background
+        const model = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b';
+        const pull = spawn(ollamaBin, ['pull', model], { stdio: 'inherit' });
+        pull.on('exit', code => console.log(`[ollama] model pull exited with code ${code}`));
+        return proc;
+      }
+    } catch {}
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  console.log('[ollama] startup timeout, continuing without');
+  return proc;
+}
+
 mongoose.connect(process.env.MONGODB_URI, {
   maxPoolSize: 50,
   minPoolSize: 2,
@@ -143,10 +182,14 @@ mongoose.connect(process.env.MONGODB_URI, {
   socketTimeoutMS: 45000,
   family: 4
 })
-  .then(() => {
+  .then(async () => {
     console.log('MongoDB connected');
 
-    // Initialize LangChain service (non-blocking — works without Ollama too)
+    // Start Ollama (installed during render-build)
+    let ollamaProc;
+    try { ollamaProc = await startOllama(); } catch (e) { console.log('[ollama]', e.message); }
+
+    // Initialize LangChain service
     const langchain = require('./services/langchainService');
     langchain.initialize().then(() => langchain.warmup()).catch(() => {});
 
@@ -156,6 +199,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 
     const gracefulShutdown = (signal) => {
       console.log(`\n${signal} received. Shutting down gracefully...`);
+      if (ollamaProc) ollamaProc.kill();
       server.close(() => {
         mongoose.connection.close(false).then(() => {
           console.log('Server closed');
