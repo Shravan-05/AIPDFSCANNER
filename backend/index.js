@@ -65,29 +65,13 @@ if (hasFrontendBuild) {
 }
 
 app.get('/api/health', async (req, res) => {
-  let ollama = { configured: true, url: process.env.OLLAMA_API_URL || 'http://localhost:11434', model: process.env.OLLAMA_MODEL || 'llama2' };
-  let aiService = { configured: !!process.env.AI_SERVICE_URL, url: process.env.AI_SERVICE_URL || '' };
-  try {
-    const ollamaService = require('./services/ollamaService');
-    const [ollamaOk, aiOk] = await Promise.all([
-      ollamaService.isAvailable().catch(() => false),
-      ollamaService._isAiServiceAvailable().catch(() => false)
-    ]);
-    ollama.available = ollamaOk;
-    ollama.status = ollamaOk ? 'connected' : 'unavailable';
-    aiService.available = aiOk;
-    aiService.status = aiOk ? 'connected' : 'unavailable';
-  } catch {
-    ollama.available = false;
-    ollama.status = 'error';
-  }
+  const nlp = require('./services/ollamaService');
   res.status(200).json({
     status: 'ok',
     service: 'AuraScan AI',
     environment: NODE_ENV,
     frontend: hasFrontendBuild ? 'built' : 'api-only',
-    ollama,
-    aiService,
+    nlp: { mode: 'local', parser_ready: nlp._ready },
     timestamp: new Date().toISOString()
   });
 });
@@ -97,16 +81,14 @@ app.get('/', (req, res) => {
 });
 
 app.get('/api/debug', async (req, res) => {
-  const ollamaSvc = require('./services/ollamaService');
+  const nlp = require('./services/ollamaService');
   const lc = require('./services/langchainService');
-  const ollamaOk = await ollamaSvc.isAvailable().catch(() => false);
   res.json({
-    ollama_url: process.env.OLLAMA_API_URL,
-    ollama_available: ollamaOk,
-    skip_ollama: ollamaSvc._skipOllama,
-    langchain_available: lc.isAvailable,
-    ollama_deployed: process.env.OLLAMA_DEPLOYED,
     node_env: process.env.NODE_ENV,
+    nlp_mode: 'local',
+    parser_ready: nlp._ready,
+    parser_intents: nlp._intents,
+    langchain_available: lc.isAvailable,
   });
 });
 
@@ -136,66 +118,7 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your_jwt_secret_key_h
   process.exit(1);
 }
 
-const { spawn, execSync } = require('child_process');
 
-async function startOllama() {
-  // Use env var or download to app directory
-  const ollamaBin = process.env.OLLAMA_BIN || path.join(__dirname, 'ollama');
-  let found = false;
-  try { execSync(`"${ollamaBin}" --version`, { stdio: 'ignore' }); found = true; } catch {}
-  if (!found) {
-    console.log('Downloading Ollama...');
-    try {
-      const tmpDir = path.join(__dirname, '.ollama_tmp');
-      fs.mkdirSync(tmpDir, { recursive: true });
-      const archive = path.join(tmpDir, 'ollama-linux-amd64.tar.zst');
-      execSync(`curl -fsSL https://ollama.com/download/ollama-linux-amd64.tar.zst -o "${archive}"`, { stdio: 'pipe', timeout: 120000, shell: true });
-      execSync(`tar --zstd -xf "${archive}" -C "${tmpDir}"`, { stdio: 'pipe', timeout: 30000, shell: true });
-      const extractedBin = path.join(tmpDir, 'bin', 'ollama');
-      if (fs.existsSync(extractedBin)) {
-        fs.renameSync(extractedBin, ollamaBin);
-        fs.chmodSync(ollamaBin, 0o755);
-        console.log('Ollama ready');
-      } else { throw new Error('binary not found after extraction'); }
-      // Cleanup
-      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
-      found = true;
-    } catch (e) {
-      console.log(`Ollama download failed: ${e.message}, skipping`);
-      try { fs.rmSync(path.join(__dirname, '.ollama_tmp'), { recursive: true, force: true }); } catch {}
-      return;
-    }
-  }
-
-  const ollamaModels = process.env.OLLAMA_MODELS || path.join(__dirname, '.ollama_models');
-  fs.mkdirSync(ollamaModels, { recursive: true });
-
-  const proc = spawn(ollamaBin, ['serve'], {
-    env: { ...process.env, OLLAMA_HOST: '0.0.0.0', OLLAMA_KEEP_ALIVE: '24h', OLLAMA_MODELS: ollamaModels },
-    stdio: 'pipe',
-  });
-  proc.stdout.on('data', d => process.stdout.write(`[ollama] ${d}`));
-  proc.stderr.on('data', d => process.stderr.write(`[ollama] ${d}`));
-  proc.on('exit', code => console.log(`[ollama] exited with code ${code}`));
-
-  // Wait for Ollama to respond
-  for (let i = 0; i < 60; i++) {
-    try {
-      const resp = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(3000) });
-      if (resp.ok) {
-        console.log('[ollama] ready');
-        // Pull model in background
-        const model = process.env.OLLAMA_MODEL || 'qwen2.5:0.5b';
-        const pull = spawn(ollamaBin, ['pull', model], { stdio: 'inherit' });
-        pull.on('exit', code => console.log(`[ollama] model pull exited with code ${code}`));
-        return proc;
-      }
-    } catch {}
-    await new Promise(r => setTimeout(r, 2000));
-  }
-  console.log('[ollama] startup timeout, continuing without');
-  return proc;
-}
 
 mongoose.connect(process.env.MONGODB_URI, {
   maxPoolSize: 50,
@@ -207,13 +130,13 @@ mongoose.connect(process.env.MONGODB_URI, {
   .then(async () => {
     console.log('MongoDB connected');
 
-    // Start Ollama (installed during render-build)
-    let ollamaProc;
-    try { ollamaProc = await startOllama(); } catch (e) { console.log('[ollama]', e.message); }
-
-    // Initialize LangChain service
+    // Initialize LangChain service (optional, only if OPENAI_API_KEY is set)
     const langchain = require('./services/langchainService');
-    langchain.initialize().then(() => langchain.warmup()).catch(() => {});
+    langchain.initialize().catch(() => {});
+
+    // Mark NLP as ready
+    const nlp = require('./services/ollamaService');
+    nlp._ready = true;
 
     const server = app.listen(PORT, () => {
       console.log(`AuraScan AI server running on port ${PORT} (${NODE_ENV})`);
@@ -221,7 +144,6 @@ mongoose.connect(process.env.MONGODB_URI, {
 
     const gracefulShutdown = (signal) => {
       console.log(`\n${signal} received. Shutting down gracefully...`);
-      if (ollamaProc) ollamaProc.kill();
       server.close(() => {
         mongoose.connection.close(false).then(() => {
           console.log('Server closed');

@@ -447,7 +447,7 @@ exports.validateAction = async (req, res) => {
 };
 
 /**
- * Test Ollama connection
+ * Test NLP parser status
  */
 exports.testOllamaConnection = async (req, res) => {
   try {
@@ -458,7 +458,7 @@ exports.testOllamaConnection = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: error.message,
-      note: 'Make sure Ollama is running. Install from https://ollama.ai and run: ollama serve'
+      note: 'Local NLP parser is active and does not require Ollama'
     });
   }
 };;

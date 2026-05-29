@@ -25,9 +25,3 @@ services:
         sync: false
       - key: JWT_EXPIRES_IN
         value: 7d
-      - key: OLLAMA_MODEL
-        value: qwen2.5:0.5b
-      - key: OLLAMA_DEPLOYED
-        value: "true"
-      - key: OLLAMA_API_URL
-        value: http://localhost:11434

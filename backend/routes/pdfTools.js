@@ -16,8 +16,8 @@ const {
 
 router.use(protect);
 
-// Ollama connection test (for debugging/setup)
-router.get('/ollama/test', testOllamaConnection);
+// NLP parser status test (for debugging/setup)
+router.get('/nlp/test', testOllamaConnection);
 
 // Using the same upload middleware, allowing up to 100 PDFs
 router.post('/merge', upload.array('files', 100), mergePdfs);

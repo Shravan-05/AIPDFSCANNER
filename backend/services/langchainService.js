@@ -25,30 +25,20 @@ class LangChainService {
   }
 
   async initialize() {
-    const provider = process.env.LLM_PROVIDER || 'ollama';
-    const model = process.env.LLM_MODEL || 'qwen2.5:0.5b';
-
+    if (!process.env.OPENAI_API_KEY) {
+      this._available = false;
+      return;
+    }
+    const model = process.env.LLM_MODEL || 'gpt-4o-mini';
     try {
-      if (provider === 'openai') {
-        const { ChatOpenAI } = require('@langchain/openai');
-        this._llm = new ChatOpenAI({
-          model,
-          temperature: 0.1,
-          maxTokens: 2048,
-          timeout: 300000,
-          apiKey: process.env.OPENAI_API_KEY,
-        });
-      } else {
-        const { ChatOllama } = require('@langchain/ollama');
-        this._llm = new ChatOllama({
-          model,
-          baseUrl: process.env.OLLAMA_API_URL || 'http://localhost:11434',
-          temperature: 0.1,
-          numPredict: 2048,
-          timeout: 300000,
-        });
-      }
-
+      const { ChatOpenAI } = require('@langchain/openai');
+      this._llm = new ChatOpenAI({
+        model,
+        temperature: 0.1,
+        maxTokens: 1024,
+        timeout: 30000,
+        apiKey: process.env.OPENAI_API_KEY,
+      });
       this._buildChains();
       this._available = true;
     } catch {
@@ -84,24 +74,8 @@ class LangChainService {
     return this._available;
   }
 
-  async _testConnection() {
-    const urls = [
-      process.env.OLLAMA_API_URL || 'http://localhost:11434',
-    ];
-    if (!urls[0].includes('localhost')) urls.push('http://localhost:11434');
-    for (const url of urls) {
-      try {
-        const response = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(5000) });
-        if (response.ok) return true;
-      } catch {}
-    }
-    return false;
-  }
-
   async warmup() {
-    if (!this._available) return;
-    const ok = await this._testConnection();
-    if (!ok) this._available = false;
+    // No-op: OpenAI connection tested on first call
   }
 
   extractJson(text) {
