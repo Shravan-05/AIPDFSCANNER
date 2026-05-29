@@ -5,6 +5,43 @@ class OllamaService {
     this.timeout = 300000; // 5 minutes
     this._available = null;
     this._lastCheck = 0;
+    this.aiServiceUrl = process.env.AI_SERVICE_URL || '';
+    this.aiServiceToken = process.env.AI_SERVICE_API_TOKEN || '';
+    this._aiServiceAvailable = null;
+  }
+
+  async _callAiService(endpoint, body = {}) {
+    if (!this.aiServiceUrl) return null;
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (this.aiServiceToken) headers['Authorization'] = `Bearer ${this.aiServiceToken}`;
+      const response = await fetch(`${this.aiServiceUrl}/api/v1/ai/${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30000)
+      });
+      if (!response.ok) return null;
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
+  async _isAiServiceAvailable() {
+    if (!this.aiServiceUrl) return false;
+    if (this._aiServiceAvailable !== null) return this._aiServiceAvailable;
+    try {
+      const response = await fetch(`${this.aiServiceUrl}/api/v1/ai/health`, {
+        signal: AbortSignal.timeout(5000)
+      });
+      const data = await response.json();
+      this._aiServiceAvailable = data.status === 'healthy';
+      return this._aiServiceAvailable;
+    } catch {
+      this._aiServiceAvailable = false;
+      return false;
+    }
   }
 
   _safeJsonParse(text) {
@@ -103,10 +140,37 @@ class OllamaService {
   }
 
   /**
-   * Parse natural language PDF command using Ollama
+   * Parse natural language PDF command using AI Service or Ollama
    */
   async parsePdfCommand(command, context = {}) {
     try {
+      // Try AI Service first (LangChain + FastAPI)
+      const aiAvailable = await this._isAiServiceAvailable();
+      if (aiAvailable) {
+        console.log('[Ollama] Using AI Service for command parsing');
+        const result = await this._callAiService('parse-command', {
+          command,
+          context: { pageCount: context.pageCount, documentType: context.documentType }
+        });
+        if (result) {
+          return {
+            intent: result.intent,
+            confidence: result.confidence,
+            entities: { pages: result.entities?.filter(e => e.type === 'page_number').map(e => e.value) || [], parameters: {} },
+            actions: result.actions.map(a => ({
+              type: a.type,
+              priority: a.priority > 0 ? 'high' : 'normal',
+              parameters: a.parameters || {}
+            })),
+            needs_clarification: result.needs_clarification,
+            clarification_question: result.clarification_question || '',
+            source: 'ai-service'
+          };
+        }
+        console.warn('[Ollama] AI Service returned no result, falling back to Ollama');
+      }
+
+      // Fallback to direct Ollama
       const isAvailable = await this.isAvailable();
       if (!isAvailable) {
         console.warn('[Ollama] Service unavailable, using fallback parser');
@@ -187,10 +251,19 @@ Only return valid JSON, no explanations.`;
   }
 
   /**
-   * Analyze document content using Ollama
+   * Analyze document content using AI Service or Ollama
    */
   async analyzeDocument(text, maxLength = 2000) {
     try {
+      // Try AI Service first
+      const aiAvailable = await this._isAiServiceAvailable();
+      if (aiAvailable) {
+        const result = await this._callAiService('analyze-document', { text, max_length: maxLength });
+        if (result) {
+          return { analysis: { documentType: result.document_type, topics: [], entities: result.entities || [], ocrQuality: 'medium' }, source: 'ai-service' };
+        }
+      }
+
       const isAvailable = await this.isAvailable();
       if (!isAvailable) return { analysis: null, source: 'unavailable' };
 
@@ -247,6 +320,22 @@ Return as JSON:
    */
   async generateOcrSuggestions(ocrText, metadata = {}) {
     try {
+      // Try AI Service first
+      const aiAvailable = await this._isAiServiceAvailable();
+      if (aiAvailable) {
+        const result = await this._callAiService('suggestions', {
+          document_type: metadata.documentType || 'document',
+          recent_actions: ['ocr'],
+          context: { ocr_text_length: ocrText.length }
+        });
+        if (result?.suggestions) {
+          return {
+            suggestions: result.suggestions.map(s => ({ issue: s.description, fix: s.command, impact: 'medium' })),
+            source: 'ai-service'
+          };
+        }
+      }
+
       const isAvailable = await this.isAvailable();
       if (!isAvailable) return { suggestions: [], source: 'unavailable' };
 

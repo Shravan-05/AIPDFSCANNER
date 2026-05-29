@@ -28,6 +28,42 @@ services:
         value: http://ollama:11434
       - key: OLLAMA_MODEL
         value: qwen2.5:0.5b
+      - key: AI_SERVICE_URL
+        value: http://ai-service:8000
+      - key: AI_SERVICE_API_TOKEN
+        value: ""
+
+  # ── LangChain AI Service (Python/FastAPI) ──────────────────────
+  # Production-grade LLM-as-API using LangChain + FastAPI.
+  # Handles PDF command parsing, document analysis, and suggestions.
+  - type: web
+    name: ai-service
+    env: docker
+    dockerfilePath: ./ai-service/Dockerfile
+    plan: starter
+    healthCheckPath: /api/v1/ai/health
+    autoDeploy: true
+    envVars:
+      - key: APP_NAME
+        value: "AI PDF Service"
+      - key: APP_VERSION
+        value: "1.0.0"
+      - key: DEBUG
+        value: "false"
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LLM_PROVIDER
+        value: ollama
+      - key: LLM_MODEL
+        value: qwen2.5:0.5b
+      - key: LLM_TEMPERATURE
+        value: "0.1"
+      - key: OLLAMA_BASE_URL
+        value: http://ollama:11434
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "60"
 
   # ── Ollama AI Private Service ──────────────────────────────────
   # Fits on Render "Starter" plan (512MB RAM) — model is ~400MB.
