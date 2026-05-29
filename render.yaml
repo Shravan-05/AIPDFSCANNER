@@ -6,10 +6,11 @@ services:
     buildCommand: npm run render-build
     startCommand: npm start
     healthCheckPath: /api/health
+    healthCheckTimeout: 300
     autoDeploy: true
     disks:
       - name: uploads
-        mountPath: /var/data
+        mountPath: /var/data/uploads
         sizeGB: 1
     envVars:
       - key: NODE_ENV
@@ -24,3 +25,9 @@ services:
         sync: false
       - key: JWT_EXPIRES_IN
         value: 7d
+      - key: OLLAMA_MODEL
+        value: qwen2.5:0.5b
+      - key: OLLAMA_DEPLOYED
+        value: "true"
+      - key: OLLAMA_API_URL
+        value: http://localhost:11434
