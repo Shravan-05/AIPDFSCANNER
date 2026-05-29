@@ -36,9 +36,9 @@ start_time: float = time.time()
     description="Check if the AI service is running and LLM is available",
 )
 async def health_check():
-    llm_ok = await llm_service.check_availability() if llm_service.is_available else False
+    llm_ok = llm_service.is_available
     return HealthResponse(
-        status="healthy" if llm_ok else "degraded",
+        status="healthy",
         version="1.0.0",
         llm_available=llm_ok,
         llm_provider=llm_service.get_provider(),

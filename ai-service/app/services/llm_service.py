@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Optional, Any
 from langchain_ollama import ChatOllama
@@ -12,6 +13,7 @@ class LLMService:
     _instance: Optional["LLMService"] = None
     _llm: Optional[BaseChatModel] = None
     _available: bool = False
+    _retry_task: Optional[asyncio.Task] = None
 
     def __new__(cls) -> "LLMService":
         if cls._instance is None:
@@ -19,6 +21,11 @@ class LLMService:
         return cls._instance
 
     async def initialize(self) -> None:
+        if self._try_init():
+            return
+        self._start_background_retry()
+
+    def _try_init(self) -> bool:
         try:
             if settings.llm_provider == "openai":
                 kwargs = {
@@ -49,9 +56,25 @@ class LLMService:
                     "model": settings.llm_model,
                 },
             )
+            return True
         except Exception as e:
+            self._llm = None
             self._available = False
-            logger.warning("LLM initialization failed", exc_info=e)
+            logger.warning("LLM init failed, will retry in background", exc_info=e)
+            return False
+
+    def _start_background_retry(self) -> None:
+        async def retry_loop():
+            retry_delay = 5
+            max_delay = 60
+            while not self._available:
+                await asyncio.sleep(retry_delay)
+                logger.info("Retrying LLM connection...")
+                if self._try_init():
+                    return
+                retry_delay = min(retry_delay * 2, max_delay)
+
+        self._retry_task = asyncio.create_task(retry_loop())
 
     @property
     def llm(self) -> Optional[BaseChatModel]:
@@ -59,16 +82,6 @@ class LLMService:
 
     @property
     def is_available(self) -> bool:
-        return self._available
-
-    async def check_availability(self) -> bool:
-        if not self._llm:
-            return False
-        try:
-            response = await self._llm.ainvoke(["test"])
-            self._available = bool(response)
-        except Exception:
-            self._available = False
         return self._available
 
     def get_provider(self) -> str:

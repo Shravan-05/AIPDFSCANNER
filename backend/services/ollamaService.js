@@ -33,11 +33,14 @@ class OllamaService {
     if (this._aiServiceAvailable !== null) return this._aiServiceAvailable;
     try {
       const response = await fetch(`${this.aiServiceUrl}/api/v1/ai/health`, {
-        signal: AbortSignal.timeout(5000)
+        signal: AbortSignal.timeout(10000)
       });
-      const data = await response.json();
-      this._aiServiceAvailable = data.status === 'healthy';
-      return this._aiServiceAvailable;
+      if (!response.ok) {
+        this._aiServiceAvailable = false;
+        return false;
+      }
+      this._aiServiceAvailable = true;
+      return true;
     } catch {
       this._aiServiceAvailable = false;
       return false;

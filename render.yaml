@@ -6,6 +6,7 @@ services:
     buildCommand: npm run render-build
     startCommand: npm start
     healthCheckPath: /api/health
+    healthCheckTimeout: 120
     autoDeploy: true
     disks:
       - name: uploads

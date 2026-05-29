@@ -66,11 +66,17 @@ if (hasFrontendBuild) {
 
 app.get('/api/health', async (req, res) => {
   let ollama = { configured: true, url: process.env.OLLAMA_API_URL || 'http://localhost:11434', model: process.env.OLLAMA_MODEL || 'llama2' };
+  let aiService = { configured: !!process.env.AI_SERVICE_URL, url: process.env.AI_SERVICE_URL || '' };
   try {
     const ollamaService = require('./services/ollamaService');
-    const available = await ollamaService.isAvailable();
-    ollama.available = available;
-    ollama.status = available ? 'connected' : 'no_models';
+    const [ollamaOk, aiOk] = await Promise.all([
+      ollamaService.isAvailable().catch(() => false),
+      ollamaService._isAiServiceAvailable().catch(() => false)
+    ]);
+    ollama.available = ollamaOk;
+    ollama.status = ollamaOk ? 'connected' : 'unavailable';
+    aiService.available = aiOk;
+    aiService.status = aiOk ? 'connected' : 'unavailable';
   } catch {
     ollama.available = false;
     ollama.status = 'error';
@@ -81,6 +87,7 @@ app.get('/api/health', async (req, res) => {
     environment: NODE_ENV,
     frontend: hasFrontendBuild ? 'built' : 'api-only',
     ollama,
+    aiService,
     timestamp: new Date().toISOString()
   });
 });
