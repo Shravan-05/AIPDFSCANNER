@@ -141,18 +141,16 @@ const { spawn, execSync } = require('child_process');
 async function startOllama() {
   const ollamaBin = process.env.OLLAMA_BIN || 'ollama';
 
-  // Download Ollama if missing
+  // Download Ollama if missing (uses official install script)
   try {
     execSync(`${ollamaBin} --version`, { stdio: 'ignore' });
   } catch {
-    console.log('Downloading Ollama...');
+    console.log('Installing Ollama via official script...');
     try {
-      execSync('curl -fsSL https://ollama.com/download/ollama-linux-amd64.tgz -o /tmp/ollama.tgz', { stdio: 'pipe' });
-      execSync('tar -C /usr/local -xzf /tmp/ollama.tgz', { stdio: 'pipe' });
-      execSync('rm /tmp/ollama.tgz', { stdio: 'pipe' });
-      console.log('Ollama downloaded');
+      execSync('curl -fsSL https://ollama.com/install.sh | sh', { stdio: 'pipe', timeout: 60000 });
+      console.log('Ollama installed');
     } catch (e) {
-      console.log(`Ollama download failed: ${e.message}, skipping`);
+      console.log(`Ollama install failed: ${e.message}, skipping`);
       return;
     }
   }
