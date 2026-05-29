@@ -1,12 +1,7 @@
 class OllamaService {
   constructor() {
-    let apiUrl = process.env.OLLAMA_API_URL || 'http://localhost:11434';
-    // If OLLAMA_DEPLOYED=true but URL points to non-existent Render hostname,
-    // force localhost — Ollama runs in the same container
-    if (process.env.OLLAMA_DEPLOYED === 'true' && !apiUrl.includes('localhost') && !apiUrl.includes('127.0.0.1')) {
-      apiUrl = 'http://localhost:11434';
-    }
-    this.baseUrl = apiUrl;
+    this.baseUrl = process.env.OLLAMA_API_URL || 'http://localhost:11434';
+    this.localUrl = 'http://localhost:11434';
     this.model = process.env.OLLAMA_MODEL || 'llama2';
     this.timeout = 300000;
     this._available = null;
@@ -15,7 +10,6 @@ class OllamaService {
     this.aiServiceToken = process.env.AI_SERVICE_API_TOKEN || '';
     this._aiServiceAvailable = null;
     this._aiServiceLastCheck = 0;
-    this._skipOllama = process.env.OLLAMA_DEPLOYED !== 'true';
     this._langchain = null;
   }
 
@@ -112,29 +106,35 @@ class OllamaService {
   }
 
   async request(path, options = {}, timeoutMs = this.timeout) {
-    const url = `${this.baseUrl}${path}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(options.headers || {})
-        }
-      });
+    // Try configured URL, then fallback to localhost if different
+    const urls = [this.baseUrl];
+    if (this.localUrl !== this.baseUrl) urls.push(this.localUrl);
 
-      const data = await response.json().catch(() => ({}));
-      return { status: response.status, ok: response.ok, data };
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        throw new Error(`Timeout after ${timeoutMs}ms connecting to ${url}`);
+    for (const base of urls) {
+      const url = `${base}${path}`;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+        });
+        const data = await response.json().catch(() => ({}));
+        return { status: response.status, ok: response.ok, data };
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          if (urls.length > 1 && base === urls[0]) continue; // try next URL
+          throw new Error(`Timeout after ${timeoutMs}ms connecting to ${url}`);
+        }
+        if (urls.length > 1 && base === urls[0]) continue; // try next URL
+        throw new Error(`${error.message} (trying ${url})`);
+      } finally {
+        clearTimeout(timer);
       }
-      throw new Error(`${error.message} (trying ${url})`);
-    } finally {
-      clearTimeout(timer);
     }
+    // Shouldn't reach here
+    throw new Error(`Failed to connect to any Ollama URL`);
   }
 
   /**

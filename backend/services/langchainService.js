@@ -85,16 +85,17 @@ class LangChainService {
   }
 
   async _testConnection() {
-    let url = process.env.OLLAMA_API_URL || 'http://localhost:11434';
-    if (process.env.OLLAMA_DEPLOYED === 'true' && !url.includes('localhost') && !url.includes('127.0.0.1')) {
-      url = 'http://localhost:11434';
+    const urls = [
+      process.env.OLLAMA_API_URL || 'http://localhost:11434',
+    ];
+    if (!urls[0].includes('localhost')) urls.push('http://localhost:11434');
+    for (const url of urls) {
+      try {
+        const response = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(5000) });
+        if (response.ok) return true;
+      } catch {}
     }
-    try {
-      const response = await fetch(`${url}/api/tags`, { signal: AbortSignal.timeout(5000) });
-      return response.ok;
-    } catch {
-      return false;
-    }
+    return false;
   }
 
   async warmup() {
