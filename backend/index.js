@@ -139,31 +139,39 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your_jwt_secret_key_h
 const { spawn, execSync } = require('child_process');
 
 async function startOllama() {
-  const ollamaBin = process.env.OLLAMA_BIN || 'ollama';
-
-  // Download Ollama if missing
-  try {
-    execSync(`${ollamaBin} --version`, { stdio: 'ignore' });
-  } catch {
+  // Use env var or download to app directory
+  const ollamaBin = process.env.OLLAMA_BIN || path.join(__dirname, 'ollama');
+  let found = false;
+  try { execSync(`"${ollamaBin}" --version`, { stdio: 'ignore' }); found = true; } catch {}
+  if (!found) {
     console.log('Downloading Ollama...');
     try {
-      execSync(
-        'apt-get update -qq && apt-get install -y -qq zstd && ' +
-        'curl -fsSL https://ollama.com/download/ollama-linux-amd64.tar.zst -o /tmp/ollama.tar.zst && ' +
-        'zstd -d /tmp/ollama.tar.zst -o /tmp/ollama.tar && ' +
-        'tar -C /usr/local -xf /tmp/ollama.tar && ' +
-        'rm -f /tmp/ollama.tar.zst /tmp/ollama.tar',
-        { stdio: 'pipe', timeout: 180000, shell: true }
-      );
-      console.log('Ollama downloaded');
+      const tmpDir = path.join(__dirname, '.ollama_tmp');
+      fs.mkdirSync(tmpDir, { recursive: true });
+      const archive = path.join(tmpDir, 'ollama-linux-amd64.tar.zst');
+      execSync(`curl -fsSL https://ollama.com/download/ollama-linux-amd64.tar.zst -o "${archive}"`, { stdio: 'pipe', timeout: 120000, shell: true });
+      execSync(`tar --zstd -xf "${archive}" -C "${tmpDir}"`, { stdio: 'pipe', timeout: 30000, shell: true });
+      const extractedBin = path.join(tmpDir, 'bin', 'ollama');
+      if (fs.existsSync(extractedBin)) {
+        fs.renameSync(extractedBin, ollamaBin);
+        fs.chmodSync(ollamaBin, 0o755);
+        console.log('Ollama ready');
+      } else { throw new Error('binary not found after extraction'); }
+      // Cleanup
+      try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch {}
+      found = true;
     } catch (e) {
       console.log(`Ollama download failed: ${e.message}, skipping`);
+      try { fs.rmSync(path.join(__dirname, '.ollama_tmp'), { recursive: true, force: true }); } catch {}
       return;
     }
   }
 
+  const ollamaModels = process.env.OLLAMA_MODELS || path.join(__dirname, '.ollama_models');
+  fs.mkdirSync(ollamaModels, { recursive: true });
+
   const proc = spawn(ollamaBin, ['serve'], {
-    env: { ...process.env, OLLAMA_HOST: '0.0.0.0', OLLAMA_KEEP_ALIVE: '24h' },
+    env: { ...process.env, OLLAMA_HOST: '0.0.0.0', OLLAMA_KEEP_ALIVE: '24h', OLLAMA_MODELS: ollamaModels },
     stdio: 'pipe',
   });
   proc.stdout.on('data', d => process.stdout.write(`[ollama] ${d}`));
