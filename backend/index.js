@@ -96,6 +96,20 @@ app.get('/', (req, res) => {
   res.json({ message: 'AuraScan AI API is running' });
 });
 
+app.get('/api/debug', async (req, res) => {
+  const ollamaSvc = require('./services/ollamaService');
+  const lc = require('./services/langchainService');
+  const ollamaOk = await ollamaSvc.isAvailable().catch(() => false);
+  res.json({
+    ollama_url: process.env.OLLAMA_API_URL,
+    ollama_available: ollamaOk,
+    skip_ollama: ollamaSvc._skipOllama,
+    langchain_available: lc.isAvailable,
+    ollama_deployed: process.env.OLLAMA_DEPLOYED,
+    node_env: process.env.NODE_ENV,
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/scans', scanRoutes);
 app.use('/api/files', fileRoutes);

@@ -160,27 +160,23 @@ class OllamaService {
    * Parse natural language PDF command using AI Service or Ollama
    */
   async parsePdfCommand(command, context = {}) {
-    // 1. Try LangChain (in-process, works without Ollama if available)
+    // 1. Try LangChain
     const lc = this._getLangchain();
     if (lc.isAvailable) {
       const result = await lc.parseCommand(command, context);
       if (result && result.intent && result.intent !== 'UNKNOWN') {
+        console.log(`[parse] LangChain OK: ${result.intent}`);
         return { ...this.normalizeParseResult(result, command), source: 'langchain' };
       }
+      console.log(`[parse] LangChain failed (result=${JSON.stringify(result)}), trying next`);
+    } else {
+      console.log('[parse] LangChain unavailable, trying next');
     }
 
-    // 2. Try AI Service (separate FastAPI process)
-    if (await this._isAiServiceAvailable()) {
-      const result = await this._callAiService('parse-command', {
-        command,
-        context: { pageCount: context.pageCount, documentType: context.documentType }
-      });
-      if (result) return { ...this._normalizeServiceResult(result), source: 'ai-service' };
-    }
-
-    // 3. Try direct Ollama
+    // 2. Try direct Ollama
     if (await this.isAvailable()) {
       try {
+        console.log(`[parse] Calling Ollama /api/generate (model=${this.model})`);
         const prompt = `Parse this PDF editing command into JSON. Intent must be one of: COMPRESS, DELETE_PAGES, DELETE_BLANK_PAGES, ROTATE_PAGES, SPLIT_PDF, ADD_WATERMARK, ADD_TEXT, REDACT_TEXT, EXTRACT_PAGES, MERGE_PDF, OCR_DOCUMENT, CROP_PAGES, DUPLICATE_PAGES, REMOVE_DUPLICATES. Command: "${command}". Return only valid JSON with keys: intent, confidence, actions, entities, needs_clarification, clarification_question.`;
 
         const response = await this.request('/api/generate', {
@@ -193,15 +189,23 @@ class OllamaService {
           if (jsonMatch) {
             const parsed = this._safeJsonParse(jsonMatch[0]);
             if (parsed) {
+              console.log(`[parse] Ollama OK: ${parsed.intent}`);
               return { ...this.normalizeParseResult(parsed, command), source: 'ollama', parseTime: new Date() };
             }
           }
         }
-      } catch {}
+        console.log(`[parse] Ollama returned no valid JSON, trying fallback`);
+      } catch (e) {
+        console.log(`[parse] Ollama error: ${e.message}, trying fallback`);
+      }
+    } else {
+      console.log('[parse] Ollama not available, trying fallback');
     }
 
-    // 4. Rule-based fallback (always works, no dependencies)
-    return { ...this.fallbackParsePdfCommand(command, context), source: 'fallback' };
+    // 3. Rule-based fallback (always works)
+    const fb = this.fallbackParsePdfCommand(command, context);
+    console.log(`[parse] Fallback: ${fb.intent}`);
+    return { ...fb, source: 'fallback' };
   }
 
   async analyzeDocument(text, maxLength = 2000) {
