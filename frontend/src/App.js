@@ -18,6 +18,7 @@ const FilesPage = lazy(() => import('./pages/FilesPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const MergePDF = lazy(() => import('./pages/MergePDF'));
 const AiEditor = lazy(() => import('./pages/AiEditor'));
+const PdfChat = lazy(() => import('./pages/PdfChat'));
 const SharedPdfPage = lazy(() => import('./pages/SharedPdfPage'));
 
 const PageLoader = () => (
@@ -108,6 +109,7 @@ function App() {
               <Route path="/files" element={<ProtectedRoute><FilesPage /></ProtectedRoute>} />
               <Route path="/tools/merge" element={<ProtectedRoute><MergePDF /></ProtectedRoute>} />
               <Route path="/tools/ai" element={<ProtectedRoute><AiEditor /></ProtectedRoute>} />
+              <Route path="/tools/pdf-chat" element={<ProtectedRoute><PdfChat /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
               <Route path="/share/:token" element={<SharedPdfPage />} />
               <Route path="*" element={<Navigate to="/" />} />

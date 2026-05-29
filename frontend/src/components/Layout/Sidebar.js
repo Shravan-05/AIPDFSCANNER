@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ScanLine, FileText, Settings, Layers, Sparkles, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { LayoutDashboard, ScanLine, FileText, Settings, Layers, Sparkles, MessageSquare, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 const links = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/scanner', icon: ScanLine, label: 'Scanner' },
   { to: '/tools/ai', icon: Sparkles, label: 'AI Editor' },
+  { to: '/tools/pdf-chat', icon: MessageSquare, label: 'PDF Chat' },
   { to: '/tools/merge', icon: Layers, label: 'Merge PDF' },
   { to: '/files', icon: FileText, label: 'Files' },
   { to: '/settings', icon: Settings, label: 'Settings' }

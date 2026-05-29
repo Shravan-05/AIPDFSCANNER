@@ -25,6 +25,7 @@ const frontendBuild = path.join(__dirname, '..', 'frontend', 'build');
 const hasFrontendBuild = fs.existsSync(frontendBuild);
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+fs.mkdirSync(path.join(__dirname, 'rag_uploads'), { recursive: true });
 
 app.set('trust proxy', 1);
 app.set('etag', 'strong');
@@ -97,6 +98,7 @@ app.use('/api/scans', scanRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/pdf', require('./routes/pdfTools'));
+app.use('/api/rag', require('./routes/rag'));
 app.use('/api', require('./routes/share'));
 
 if (hasFrontendBuild) {
