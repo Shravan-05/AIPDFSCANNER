@@ -105,8 +105,13 @@ class LangChainService {
       });
       return this.extractJson(raw);
     } catch (err) {
-      this._available = false;
-      console.log(`[LangChain] LLM call failed (${err.message}), disabled for this session`);
+      const isQuota = err.message?.includes('429') || err.message?.includes('quota');
+      if (isQuota) {
+        console.log('[LangChain] quota exceeded, using local parser');
+      } else {
+        this._available = false;
+        console.log('[LangChain] disabled (' + err.message.slice(0, 60) + ')');
+      }
       return null;
     }
   }
@@ -119,8 +124,8 @@ class LangChainService {
       });
       return this.extractJson(raw);
     } catch (err) {
-      this._available = false;
-      console.log(`[LangChain] LLM call failed (${err.message}), disabled for this session`);
+      const isQuota = err.message?.includes('429') || err.message?.includes('quota');
+      if (!isQuota) this._available = false;
       return null;
     }
   }
