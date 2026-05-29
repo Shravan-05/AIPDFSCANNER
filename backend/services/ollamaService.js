@@ -1,6 +1,12 @@
 class OllamaService {
   constructor() {
-    this.baseUrl = process.env.OLLAMA_API_URL || 'http://localhost:11434';
+    let apiUrl = process.env.OLLAMA_API_URL || 'http://localhost:11434';
+    // If OLLAMA_DEPLOYED=true but URL points to non-existent Render hostname,
+    // force localhost — Ollama runs in the same container
+    if (process.env.OLLAMA_DEPLOYED === 'true' && !apiUrl.includes('localhost') && !apiUrl.includes('127.0.0.1')) {
+      apiUrl = 'http://localhost:11434';
+    }
+    this.baseUrl = apiUrl;
     this.model = process.env.OLLAMA_MODEL || 'llama2';
     this.timeout = 300000;
     this._available = null;
@@ -9,7 +15,7 @@ class OllamaService {
     this.aiServiceToken = process.env.AI_SERVICE_API_TOKEN || '';
     this._aiServiceAvailable = null;
     this._aiServiceLastCheck = 0;
-    this._skipOllama = !process.env.OLLAMA_DEPLOYED && this.baseUrl.includes('localhost');
+    this._skipOllama = process.env.OLLAMA_DEPLOYED !== 'true';
     this._langchain = null;
   }
 
