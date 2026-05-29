@@ -127,22 +127,32 @@
   }
 
   _matchWord(cmd, word) {
-    return new RegExp('\\b' + NlpService._e(word) + '\\b', 'i').test(cmd);
+    // Match with or without trailing s/es/ed/ing for plurals
+    return new RegExp('\\b' + NlpService._e(word) + '(?:s|es|ed|ing)?\\b', 'i').test(cmd);
   }
 
   _extractPages(cmd) {
     const pages = new Set();
-    const listRe = /\bp ages?\s+((?:\d+(?:\s*[, ]\s*|\s+and\s+|\s+to\s+|\s*-\s*)?)+)/i;
-    const lm = cmd.match(listRe);
-    if (lm) lm[1].match(/\d+/g)?.forEach(n => { const p = parseInt(n, 10); if (p > 0) pages.add(p); });
-    const sm = cmd.match(/\bpage\s+(\d+)\b/i);
-    if (sm) { const p = parseInt(sm[1], 10); if (p > 0) pages.add(p); }
-    const rr = /\b(\d+)\s*[-–]\s*(\d+)\b/g;
+    // Extract numbers after "page"/"pages" keyword
+    const pageBlock = cmd.match(/\bpages?\s+([\d,\s\-–andto]+)/i);
+    if (pageBlock) {
+      pageBlock[1].split(/[,;]\s*|\s+and\s+|\s+to\s+|\s*[-–]\s*|\s+/)
+        .map(s => s.trim()).filter(Boolean).forEach(s => {
+          const n = parseInt(s, 10);
+          if (!isNaN(n) && n > 0) pages.add(n);
+        });
+    }
+    // Ranges like "1-5" or "1 to 5" anywhere in command
+    const rr = /\b(\d+)\s*(?:[-–]|to)\s*(\d+)\b/g;
     let m;
     while ((m = rr.exec(cmd)) !== null) {
       const s = parseInt(m[1], 10), e = parseInt(m[2], 10);
       for (let i = Math.min(s, e); i <= Math.max(s, e); i++) pages.add(i);
     }
+    // Single "page X" (also catches if pageBlock missed it)
+    const sm = cmd.match(/\bpage\s+(\d+)\b/i);
+    if (sm) { const p = parseInt(sm[1], 10); if (p > 0) pages.add(p); }
+    // Ordinals
     const ord = { first:1, second:2, third:3, fourth:4, fifth:5, sixth:6, seventh:7, eighth:8, ninth:9, tenth:10 };
     for (const [w, n] of Object.entries(ord)) {
       if (new RegExp('\\b' + w + '\\b', 'i').test(cmd)) pages.add(n);
