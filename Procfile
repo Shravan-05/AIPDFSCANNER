@@ -1,1 +1,1 @@
-web: npm start --prefix backend
+web: bash start.sh
